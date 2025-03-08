@@ -10,6 +10,7 @@ use std::f64;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Once};
 use tokio_stream::wrappers::ReceiverStream;
+use tokio_stream::StreamExt;
 use tracing_subscriber::fmt::Subscriber;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::EnvFilter;
@@ -169,4 +170,18 @@ pub fn get_asset_path(name: &str) -> PathBuf {
   let file = format!("tests/asset/{name}");
   let absolute_path = std::env::current_dir().unwrap().join(Path::new(&file));
   absolute_path
+}
+
+pub async fn collect_bytes_stream(
+  mut stream: ReceiverStream<Result<Value, PluginError>>,
+) -> String {
+  let mut list = vec![];
+  while let Some(s) = stream.next().await {
+    if let Value::Object(mut map) = s.unwrap() {
+      let s = map.remove("1").unwrap().as_str().unwrap().to_string();
+      list.push(s);
+    }
+  }
+
+  list.join("")
 }

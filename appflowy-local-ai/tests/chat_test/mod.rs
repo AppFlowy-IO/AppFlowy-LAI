@@ -1,10 +1,10 @@
-use crate::util::{get_asset_path, LocalAITest};
+use crate::util::{collect_bytes_stream, get_asset_path, LocalAITest};
 
 use std::collections::HashMap;
 
 use appflowy_local_ai::ai_ops::{CompleteTextType, LocalAITranslateItem, LocalAITranslateRowData};
 
-use serde_json::{json, Value};
+use serde_json::json;
 
 use tokio_stream::StreamExt;
 
@@ -45,16 +45,8 @@ async fn ci_chat_stream_test() {
   });
 
   let chat_id = uuid::Uuid::new_v4().to_string();
-  let mut resp = test.stream_chat_message(&chat_id, "what is banana?").await;
-  let mut list = vec![];
-  while let Some(s) = resp.next().await {
-    if let Value::Object(mut map) = s.unwrap() {
-      let s = map.remove("1").unwrap().as_str().unwrap().to_string();
-      list.push(s);
-    }
-  }
-
-  let answer = list.join("");
+  let resp = test.stream_chat_message(&chat_id, "what is banana?").await;
+  let answer = collect_bytes_stream(resp).await;
   println!("stream response: {:?}", answer);
 
   let expected = r#"banana is a fruit that belongs to the genus _______, which also includes other fruits such as apple and pear. It has several varieties with different shapes, colors, and flavors depending on where it grows. Bananas are typically green or yellow in color and have smooth skin that peels off easily when ripe. They are sweet and juicy, often eaten raw or roasted, and can also be used for cooking and baking. In some cultures, banana is considered a symbol of good luck, fertility, and prosperity. Bananas originated in Southeast Asia, where they were cultivated by early humans thousands of years ago. They are now grown around the world as a major crop, with significant production in many countries including the United States, Brazil, India, and China#"#;
@@ -121,21 +113,12 @@ async fn ci_chat_with_pdf() {
     .await
     .unwrap();
 
-  let mut resp = test
+  let resp = test
     .ollama_plugin
     .stream_question(&chat_id, "what is AppFlowy Values?", json!({}))
     .await
     .unwrap();
-
-  let mut list = vec![];
-  while let Some(s) = resp.next().await {
-    if let Value::Object(mut map) = s.unwrap() {
-      let s = map.remove("1").unwrap().as_str().unwrap().to_string();
-      list.push(s);
-    }
-  }
-
-  let answer = list.join("");
+  let answer = collect_bytes_stream(resp).await;
   println!("chat with pdf response: {}", answer);
 
   let expected = r#"
