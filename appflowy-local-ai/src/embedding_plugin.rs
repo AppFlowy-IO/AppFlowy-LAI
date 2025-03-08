@@ -18,7 +18,7 @@ use tokio_stream::wrappers::WatchStream;
 use tokio_stream::StreamExt;
 use tracing::{info, trace};
 
-pub struct LocalEmbedding {
+pub struct EmbeddingPlugin {
   plugin_manager: Arc<PluginManager>,
   plugin_config: RwLock<Option<EmbeddingPluginConfig>>,
   running_state: RunningStateSender,
@@ -27,7 +27,7 @@ pub struct LocalEmbedding {
   running_state_rx: RunningStateReceiver,
 }
 
-impl LocalEmbedding {
+impl EmbeddingPlugin {
   pub fn new(plugin_manager: Arc<PluginManager>) -> Self {
     let (running_state, rx) = tokio::sync::watch::channel(RunningState::Connecting);
     Self {
@@ -52,20 +52,18 @@ impl LocalEmbedding {
 
     let info = PluginInfo {
       name: "embedding".to_string(),
-      exec_path: config.bin_path,
+      exec_path: config.executable_path.clone(),
     };
     let plugin_id = self
       .plugin_manager
       .create_plugin(info, self.running_state.clone())
       .await?;
 
-    let mut params = json!({
-        "absolute_model_path":config.model_path,
-    });
-
+    let mut params = json!({});
     if let Some(persist_directory) = config.persist_directory {
       params["persist_directory"] = json!(persist_directory);
     }
+    params["model_name"] = json!(config.model_name);
 
     let plugin = self.plugin_manager.init_plugin(plugin_id, params).await?;
     info!("[Embedding Plugin] {} setup success", plugin);
@@ -150,43 +148,36 @@ impl LocalEmbedding {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct EmbeddingPluginConfig {
-  pub bin_path: PathBuf,
-  pub model_path: PathBuf,
+  pub executable_path: PathBuf,
+  pub model_name: String,
   pub persist_directory: Option<PathBuf>,
 }
 
 impl EmbeddingPluginConfig {
   pub fn new<T: Into<PathBuf>>(
     bin_path: T,
-    model_path: T,
+    model_name: String,
     storage_path: Option<PathBuf>,
   ) -> Result<Self> {
-    let bin_path = bin_path.into();
-    let model_path = model_path.into();
-    if !bin_path.exists() {
+    let executable_path = bin_path.into();
+    if !executable_path.exists() {
       return Err(anyhow!(
         "Embedding binary path does not exist: {:?}",
-        bin_path
+        executable_path
       ));
     }
-    if !bin_path.is_file() {
+    if !executable_path.is_file() {
       return Err(anyhow!(
         "Embedding binary path is not a file: {:?}",
-        bin_path
+        executable_path
       ));
     }
 
     // Check if local_model_dir exists and is a directory
-    if !model_path.exists() {
-      return Err(anyhow!("embedding model does not exist: {:?}", model_path));
-    }
-    if !model_path.is_file() {
-      return Err(anyhow!("embedding model is not a file: {:?}", model_path));
-    }
 
     Ok(Self {
-      bin_path,
-      model_path,
+       executable_path,
+      model_name,
       persist_directory: storage_path,
     })
   }
