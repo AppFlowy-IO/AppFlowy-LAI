@@ -34,7 +34,7 @@ pub struct OllamaAIPlugin {
 
 impl OllamaAIPlugin {
   pub fn new(plugin_manager: Arc<PluginManager>) -> Self {
-    let (running_state, rx) = tokio::sync::watch::channel(RunningState::Connecting);
+    let (running_state, rx) = tokio::sync::watch::channel(RunningState::Initialization);
     Self {
       plugin_manager,
       plugin_config: Default::default(),

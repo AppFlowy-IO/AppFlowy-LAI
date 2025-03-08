@@ -29,7 +29,7 @@ pub struct EmbeddingPlugin {
 
 impl EmbeddingPlugin {
   pub fn new(plugin_manager: Arc<PluginManager>) -> Self {
-    let (running_state, rx) = tokio::sync::watch::channel(RunningState::Connecting);
+    let (running_state, rx) = tokio::sync::watch::channel(RunningState::Initialization);
     Self {
       plugin_manager,
       plugin_config: Default::default(),
@@ -176,7 +176,7 @@ impl EmbeddingPluginConfig {
     // Check if local_model_dir exists and is a directory
 
     Ok(Self {
-       executable_path,
+      executable_path,
       model_name,
       persist_directory: storage_path,
     })

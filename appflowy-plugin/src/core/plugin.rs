@@ -63,16 +63,25 @@ pub struct RpcCtx {
 
 #[derive(Debug, Clone)]
 pub enum RunningState {
+  Initialization,
   /// The plugin is in the process of establishing a connection
   Connecting,
   /// The plugin has successfully established a connection
-  Connected { plugin_id: PluginId },
+  Connected {
+    plugin_id: PluginId,
+  },
   /// The plugin is currently running
-  Running { plugin_id: PluginId },
+  Running {
+    plugin_id: PluginId,
+  },
   /// The plugin has been stopped intentionally
-  Stopped { plugin_id: PluginId },
+  Stopped {
+    plugin_id: PluginId,
+  },
   /// The plugin stopped unexpectedly
-  UnexpectedStop { plugin_id: PluginId },
+  UnexpectedStop {
+    plugin_id: PluginId,
+  },
 }
 
 impl RunningState {
@@ -83,6 +92,7 @@ impl RunningState {
       RunningState::Running { plugin_id } => Some(*plugin_id),
       RunningState::Stopped { plugin_id } => Some(*plugin_id),
       RunningState::UnexpectedStop { plugin_id } => Some(*plugin_id),
+      RunningState::Initialization => None,
     }
   }
 
