@@ -1,16 +1,12 @@
-use crate::util::{get_asset_path, setup_log, LocalAITest};
-use appflowy_local_ai::chat_plugin::{AIPluginConfig, AppFlowyLocalAI};
-use appflowy_local_ai::plugin_request::download_plugin;
+use crate::util::{get_asset_path, LocalAITest};
+
 use std::collections::HashMap;
 
 use appflowy_local_ai::ai_ops::{CompleteTextType, LocalAITranslateItem, LocalAITranslateRowData};
-use appflowy_plugin::manager::PluginManager;
-use serde_json::Value;
-use std::env::temp_dir;
-use std::path::PathBuf;
-use std::sync::Arc;
+
+use serde_json::{json, Value};
+
 use tokio_stream::StreamExt;
-use zip_extensions::zip_extract;
 
 #[tokio::test]
 async fn load_chat_model_test() {
@@ -35,7 +31,7 @@ async fn ci_chat_stream_test() {
   test.init_embedding_plugin().await;
 
   let chat_plugin = test
-    .local_ai
+    .ollama_plugin
     .get_ai_plugin()
     .await
     .unwrap()
@@ -59,13 +55,17 @@ async fn ci_chat_stream_test() {
   }
 
   let answer = list.join("");
-  eprintln!("response: {:?}", answer);
+  println!("stream response: {:?}", answer);
 
   let expected = r#"banana is a fruit that belongs to the genus _______, which also includes other fruits such as apple and pear. It has several varieties with different shapes, colors, and flavors depending on where it grows. Bananas are typically green or yellow in color and have smooth skin that peels off easily when ripe. They are sweet and juicy, often eaten raw or roasted, and can also be used for cooking and baking. In some cultures, banana is considered a symbol of good luck, fertility, and prosperity. Bananas originated in Southeast Asia, where they were cultivated by early humans thousands of years ago. They are now grown around the world as a major crop, with significant production in many countries including the United States, Brazil, India, and China#"#;
   let score = test.calculate_similarity(&answer, expected).await;
   assert!(score > 0.7, "score: {}", score);
 
-  let questions = test.local_ai.get_related_question(&chat_id).await.unwrap();
+  let questions = test
+    .ollama_plugin
+    .get_related_question(&chat_id)
+    .await
+    .unwrap();
   assert_eq!(questions.len(), 3);
   println!("related questions: {:?}", questions)
 }
@@ -77,7 +77,7 @@ async fn ci_completion_text_test() {
   test.init_embedding_plugin().await;
 
   let chat_plugin = test
-    .local_ai
+    .ollama_plugin
     .get_ai_plugin()
     .await
     .unwrap()
@@ -91,7 +91,7 @@ async fn ci_completion_text_test() {
   });
 
   let mut resp = test
-    .local_ai
+    .ollama_plugin
     .complete_text("tell me the book, atomic habits", CompleteTextType::AskAI)
     .await
     .unwrap();
@@ -116,31 +116,36 @@ async fn ci_chat_with_pdf() {
   let chat_id = uuid::Uuid::new_v4().to_string();
   let pdf = get_asset_path("AppFlowy_Values.pdf");
   test
-    .local_ai
+    .ollama_plugin
     .index_file(&chat_id, Some(pdf), None, None)
     .await
     .unwrap();
 
-  let resp = test
-    .local_ai
-    .ask_question(
-      &chat_id,
-      // "what is the meaning of Aim High and Iterate in AppFlowy?",
-      "what is AppFlowy Values?",
-    )
+  let mut resp = test
+    .ollama_plugin
+    .stream_question(&chat_id, "what is AppFlowy Values?", json!({}))
     .await
     .unwrap();
 
-  println!("chat with pdf response: {}", resp);
+  let mut list = vec![];
+  while let Some(s) = resp.next().await {
+    if let Value::Object(mut map) = s.unwrap() {
+      let s = map.remove("1").unwrap().as_str().unwrap().to_string();
+      list.push(s);
+    }
+  }
+
+  let answer = list.join("");
+  println!("chat with pdf response: {}", answer);
 
   let expected = r#"
-1. **Mission Driven**: Our mission is to enable everyone to unleash their potential and achieve more with secure workplace tools.
-2. **Collaboration**: We pride ourselves on being a great team. We foster collaboration, value diversity and inclusion, and encourage sharing.
-3. **Honesty**: We are honest with ourselves. We admit mistakes freely and openly. We provide candid, helpful, timely feedback to colleagues with respect, regardless of their status or whether they disagree with us.
-4. **Aim High and Iterate**: We strive for excellence with a growth mindset. We dream big, start small, and move fast. We take smaller steps and ship smaller, simpler features.
-5. **Transparency**: We make information about AppFlowy public by default unless there is a compelling reason not to. We are straightforward and kind with ourselves and each other.
-"#;
-  let score = test.calculate_similarity(&resp, expected).await;
+  1. **Mission Driven**: Our mission is to enable everyone to unleash their potential and achieve more with secure workplace tools.
+  2. **Collaboration**: We pride ourselves on being a great team. We foster collaboration, value diversity and inclusion, and encourage sharing.
+  3. **Honesty**: We are honest with ourselves. We admit mistakes freely and openly. We provide candid, helpful, timely feedback to colleagues with respect, regardless of their status or whether they disagree with us.
+  4. **Aim High and Iterate**: We strive for excellence with a growth mindset. We dream big, start small, and move fast. We take smaller steps and ship smaller, simpler features.
+  5. **Transparency**: We make information about AppFlowy public by default unless there is a compelling reason not to. We are straightforward and kind with ourselves and each other.
+  "#;
+  let score = test.calculate_similarity(&answer, expected).await;
   assert!(score > 0.6, "score: {}", score);
 }
 
@@ -165,7 +170,11 @@ async fn ci_database_row_test() {
            willing to stick with them for years"
       .to_string(),
   );
-  let resp = test.local_ai.summary_database_row(params).await.unwrap();
+  let resp = test
+    .ollama_plugin
+    .summary_database_row(params)
+    .await
+    .unwrap();
   let expected = r#"
   Finished reading "Atomic Habits" on 2023-02-10. The book emphasizes that
   small, regular practices can lead to significant growth over time. Bad
@@ -194,7 +203,11 @@ async fn ci_database_row_test() {
     language: "chinese".to_string(),
     include_header: false,
   };
-  let resp = test.local_ai.translate_database_row(data).await.unwrap();
+  let resp = test
+    .ollama_plugin
+    .translate_database_row(data)
+    .await
+    .unwrap();
   let resp_str: String = resp
     .items
     .into_iter()
@@ -205,47 +218,4 @@ async fn ci_database_row_test() {
   let expected = r#"书名:原子习惯,评分:8,完成阅读日期:2023-02-10"#;
   let score = test.calculate_similarity(&resp_str, expected).await;
   assert!(score > 0.8, "score: {}, actural: {}", score, resp_str);
-}
-
-#[tokio::test]
-async fn load_aws_chat_bin_test() {
-  setup_log();
-  let plugin_manager = PluginManager::new();
-  let llm_chat = AppFlowyLocalAI::new(Arc::new(plugin_manager));
-
-  let chat_bin = chat_bin_path().await;
-  // clear_extended_attributes(&chat_bin).await.unwrap();
-
-  let mut chat_config = AIPluginConfig::new(chat_bin, chat_model()).unwrap();
-  chat_config = chat_config.with_device("gpu");
-  llm_chat.init_chat_plugin(chat_config).await.unwrap();
-
-  let chat_id = uuid::Uuid::new_v4().to_string();
-  let resp = llm_chat
-    .ask_question(&chat_id, "what is banana?")
-    .await
-    .unwrap();
-  assert!(!resp.is_empty());
-  eprintln!("response: {:?}", resp);
-}
-
-async fn chat_bin_path() -> PathBuf {
-  let url = "https://appflowy-local-ai.s3.amazonaws.com/macos-latest/AppFlowyAI_release.zip?AWSAccessKeyId=AKIAVQA4ULIFKSXHI6PI&Signature=p8evDjdypl58nbGK8qJ%2F1l0Zs%2FU%3D&Expires=1721044152";
-  let temp_dir = temp_dir().join("download_plugin");
-  if !temp_dir.exists() {
-    std::fs::create_dir(&temp_dir).unwrap();
-  }
-  let path = download_plugin(url, &temp_dir, "AppFlowyAI.zip", None, None, None)
-    .await
-    .unwrap();
-  println!("Downloaded plugin to {:?}", path);
-
-  zip_extract(&path, &temp_dir).unwrap();
-  temp_dir.join("appflowy_ai_plugin")
-}
-
-fn chat_model() -> PathBuf {
-  let model_dir = PathBuf::from(dotenv::var("LOCAL_AI_MODEL_DIR").unwrap());
-  let chat_model = dotenv::var("LOCAL_AI_CHAT_MODEL_NAME").unwrap();
-  model_dir.join(chat_model)
 }

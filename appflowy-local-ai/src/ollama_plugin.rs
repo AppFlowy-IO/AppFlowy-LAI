@@ -7,11 +7,10 @@ use appflowy_plugin::core::plugin::{
 };
 use appflowy_plugin::error::PluginError;
 use appflowy_plugin::manager::PluginManager;
-use appflowy_plugin::util::{get_operating_system, OperatingSystem};
+use appflowy_plugin::util::get_operating_system;
 use bytes::Bytes;
-use serde::{Deserialize, Serialize};
 
-use serde_json::Value;
+use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::path::PathBuf;
@@ -24,31 +23,16 @@ use tokio_stream::wrappers::{ReceiverStream, WatchStream};
 use tokio_stream::StreamExt;
 use tracing::{error, info, instrument, trace};
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct LocalLLMSetting {
-  pub chat_bin_path: String,
-  pub chat_model_path: String,
-  pub embedding_model_path: String,
-  pub enabled: bool,
-}
-
-impl LocalLLMSetting {
-  pub fn validate(&self) -> Result<()> {
-    AIPluginConfig::new(&self.chat_bin_path, &self.chat_model_path)?;
-    Ok(())
-  }
-}
-
-pub struct AppFlowyLocalAI {
+pub struct OllamaAIPlugin {
   plugin_manager: Arc<PluginManager>,
-  plugin_config: RwLock<Option<AIPluginConfig>>,
+  plugin_config: RwLock<Option<OllamaPluginConfig>>,
   running_state: RunningStateSender,
   #[allow(dead_code)]
   // keep at least one receiver that make sure the sender can receive value
   running_state_rx: RunningStateReceiver,
 }
 
-impl AppFlowyLocalAI {
+impl OllamaAIPlugin {
   pub fn new(plugin_manager: Arc<PluginManager>) -> Self {
     let (running_state, rx) = tokio::sync::watch::channel(RunningState::Connecting);
     Self {
@@ -242,7 +226,7 @@ impl AppFlowyLocalAI {
   }
 
   #[instrument(skip_all, err)]
-  pub async fn init_chat_plugin(&self, config: AIPluginConfig) -> Result<()> {
+  pub async fn init_chat_plugin(&self, config: OllamaPluginConfig) -> Result<()> {
     let state = self.running_state.borrow().clone();
     if state.is_ready() {
       if let Some(existing_config) = self.plugin_config.read().await.as_ref() {
@@ -254,9 +238,9 @@ impl AppFlowyLocalAI {
       }
     }
 
-    let system = get_operating_system();
+    let _system = get_operating_system();
     // Initialize chat plugin if the config is different
-    // If the chat_bin_path is different, remove the old plugin
+    // If the OLLAMA_PLUGIN_EXE_PATH is different, remove the old plugin
     if let Err(err) = self.destroy_chat_plugin().await {
       error!("[AI Plugin] failed to destroy plugin: {:?}", err);
     }
@@ -264,8 +248,8 @@ impl AppFlowyLocalAI {
     // create new plugin
     trace!("[AI Plugin] create chat plugin: {:?}", config);
     let plugin_info = PluginInfo {
-      name: "chat_plugin".to_string(),
-      exec_path: config.chat_bin_path.clone(),
+      name: "ollama_ai_plugin".to_string(),
+      exec_path: config.executable_path.clone(),
     };
     let plugin_id = self
       .plugin_manager
@@ -274,45 +258,14 @@ impl AppFlowyLocalAI {
 
     // init plugin
     trace!("[AI Plugin] init chat plugin model: {:?}", plugin_id);
-    let model_path = config.chat_model_path.clone();
-    let mut params = match system {
-      OperatingSystem::Windows => {
-        let device = config.device.as_str();
-        serde_json::json!({
-          "absolute_chat_model_path": model_path,
-          "device": device,
-        })
-      },
-      OperatingSystem::Linux => {
-        let device = config.device.as_str();
-        serde_json::json!({
-          "absolute_chat_model_path": model_path,
-          "device": device,
-        })
-      },
-      OperatingSystem::MacOS => {
-        let device = config.device.as_str();
-        serde_json::json!({
-          "absolute_chat_model_path": model_path,
-          "device": device,
-        })
-      },
-      _ => {
-        return Err(anyhow!("Unsupported operating system"));
-      },
-    };
+    let mut params = json!({});
+    params["verbose"] = json!(config.verbose);
+    params["server_url"] = json!(config.server_url);
+    params["model_name"] = json!(config.chat_model_name);
 
-    params["verbose"] = serde_json::json!(config.verbose);
-    if let Some(related_model_path) = config.related_model_path.clone() {
-      params["absolute_related_model_path"] = serde_json::json!(related_model_path);
-    }
-
-    if let (Some(embedding_model_path), Some(persist_directory)) = (
-      config.embedding_model_path.clone(),
-      config.persist_directory.clone(),
-    ) {
-      params["vectorstore_config"] = serde_json::json!({
-        "absolute_model_path": embedding_model_path,
+    if let Some(persist_directory) = config.persist_directory.clone() {
+      params["vectorstore_config"] = json!({
+        "model_name": config.embedding_model_name,
         "persist_directory": persist_directory,
       });
     }
@@ -380,90 +333,47 @@ impl AppFlowyLocalAI {
 }
 
 #[derive(Eq, PartialEq, Debug, Clone)]
-pub struct AIPluginConfig {
-  pub chat_bin_path: PathBuf,
-  pub chat_model_path: PathBuf,
-  pub related_model_path: Option<PathBuf>,
-  pub embedding_model_path: Option<PathBuf>,
+pub struct OllamaPluginConfig {
+  pub executable_path: PathBuf,
+  pub chat_model_name: String,
+  pub embedding_model_name: String,
+  pub server_url: String,
   pub persist_directory: Option<PathBuf>,
-  pub device: String,
   pub verbose: bool,
 }
 
-impl AIPluginConfig {
-  pub fn new<T: Into<PathBuf>>(chat_bin_path: T, chat_model_path: T) -> Result<Self> {
-    let chat_bin_path = chat_bin_path.into();
-    if !chat_bin_path.exists() {
+impl OllamaPluginConfig {
+  pub fn new(
+    executable_path: PathBuf,
+    chat_model_name: String,
+    embedding_model_name: String,
+    server_url: Option<String>,
+  ) -> Result<Self> {
+    if !executable_path.exists() {
       return Err(anyhow!(
-        "Chat binary path does not exist: {:?}",
-        chat_bin_path
+        "executable path does not exist: {:?}",
+        executable_path
       ));
     }
-    if !chat_bin_path.is_file() {
-      return Err(anyhow!(
-        "Chat binary path is not a file: {:?}",
-        chat_bin_path
-      ));
-    }
-
-    // Check if local_model_dir exists and is a directory
-    let chat_model_path = chat_model_path.into();
-    if !chat_model_path.exists() {
-      return Err(anyhow!("Local model does not exist: {:?}", chat_model_path));
-    }
-    if !chat_model_path.is_file() {
-      return Err(anyhow!("Local model is not a file: {:?}", chat_model_path));
-    }
-
     Ok(Self {
-      chat_bin_path,
-      chat_model_path,
-      related_model_path: None,
-      embedding_model_path: None,
+      executable_path,
+      chat_model_name,
+      embedding_model_name,
       persist_directory: None,
-      device: "cpu".to_string(),
+      server_url: server_url.unwrap_or("http://localhost:11434".to_string()),
       verbose: false,
     })
   }
-
-  pub fn with_device(mut self, device: &str) -> Self {
-    self.device = device.to_string();
-    self
-  }
-
   pub fn with_verbose(mut self, verbose: bool) -> Self {
     self.verbose = verbose;
     self
   }
-  pub fn set_rag_enabled(
-    &mut self,
-    embedding_model_path: &PathBuf,
-    persist_directory: &PathBuf,
-  ) -> Result<()> {
-    if !embedding_model_path.exists() {
-      return Err(anyhow!(
-        "embedding model path does not exist: {:?}",
-        embedding_model_path
-      ));
-    }
-    if !embedding_model_path.is_file() {
-      return Err(anyhow!(
-        "embedding model is not a file: {:?}",
-        embedding_model_path
-      ));
-    }
-
+  pub fn set_rag_enabled(&mut self, persist_directory: &PathBuf) -> Result<()> {
     if !persist_directory.exists() {
       std::fs::create_dir_all(persist_directory)?;
     }
 
-    self.embedding_model_path = Some(embedding_model_path.clone());
     self.persist_directory = Some(persist_directory.clone());
     Ok(())
-  }
-
-  pub fn with_related_model_path<T: Into<PathBuf>>(mut self, related_model_path: T) -> Self {
-    self.related_model_path = Some(related_model_path.into());
-    self
   }
 }

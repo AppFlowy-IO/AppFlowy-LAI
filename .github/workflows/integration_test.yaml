@@ -70,19 +70,19 @@ jobs:
         run: |
           ls
           ABS_PATH=$(pwd)
-          chat_bin_path=$ABS_PATH/AppFlowyAI/appflowy_ai_plugin
-          embedding_bin_path=$ABS_PATH/AppFlowyAI/appflowy_embedding_plugin
+          OLLAMA_PLUGIN_EXE_PATH=$ABS_PATH/AppFlowyAI/appflowy_ai_plugin
+          OLLAMA_EMBEDDING_EXE_PATH=$ABS_PATH/AppFlowyAI/appflowy_embedding_plugin
           
           cp dev.env .env
           sed -i '' 's|RUST_LOG=.*|RUST_LOG=trace|' .env
           
           # binary
-          sed -i '' "s|CHAT_BIN_PATH=.*|CHAT_BIN_PATH=$chat_bin_path|" .env
-          sed -i '' "s|EMBEDDING_BIN_PATH=.*|EMBEDDING_BIN_PATH=$embedding_bin_path|" .env
+          sed -i '' "s|OLLAMA_PLUGIN_EXE_PATH=.*|OLLAMA_PLUGIN_EXE_PATH=$OLLAMA_PLUGIN_EXE_PATH|" .env
+          sed -i '' "s|OLLAMA_EMBEDDING_EXE_PATH=.*|OLLAMA_EMBEDDING_EXE_PATH=$OLLAMA_EMBEDDING_EXE_PATH|" .env
           # model
-          sed -i '' "s|LOCAL_AI_MODEL_DIR=.*|LOCAL_AI_MODEL_DIR=$ABS_PATH|" .env
-          sed -i '' 's|LOCAL_AI_CHAT_MODEL_NAME=.*|LOCAL_AI_CHAT_MODEL_NAME=tinyllama.gguf|' .env
-          sed -i '' 's|LOCAL_AI_EMBEDDING_MODEL_NAME=.*|LOCAL_AI_EMBEDDING_MODEL_NAME=all-MiniLM-L12-v2.F16.gguf|' .env
+          sed -i '' "s|OLLAMA_SERVER_URL=.*|OLLAMA_SERVER_URL=$ABS_PATH|" .env
+          sed -i '' 's|OLLAMA_CHAT_MODEL_NAME=.*|OLLAMA_CHAT_MODEL_NAME=tinyllama.gguf|' .env
+          sed -i '' 's|OLLAMA_EMBEDDING_MODEL_NAME=.*|OLLAMA_EMBEDDING_MODEL_NAME=all-MiniLM-L12-v2.F16.gguf|' .env
           cat .env
         shell: bash
 
@@ -90,19 +90,19 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           ABS_PATH=$(pwd)
-          chat_bin_path=$ABS_PATH/AppFlowyAI/appflowy_ai_plugin
-          embedding_bin_path=$ABS_PATH/AppFlowyAI/appflowy_embedding_plugin
+          OLLAMA_PLUGIN_EXE_PATH=$ABS_PATH/AppFlowyAI/appflowy_ai_plugin
+          OLLAMA_EMBEDDING_EXE_PATH=$ABS_PATH/AppFlowyAI/appflowy_embedding_plugin
           
           cp dev.env .env
           sed -i 's|RUST_LOG=.*|RUST_LOG=trace|' .env
           
           # binary
-          sed -i "s|CHAT_BIN_PATH=.*|CHAT_BIN_PATH=$chat_bin_path|" .env
-          sed -i "s|EMBEDDING_BIN_PATH=.*|EMBEDDING_BIN_PATH=$embedding_bin_path|" .env
+          sed -i "s|OLLAMA_PLUGIN_EXE_PATH=.*|OLLAMA_PLUGIN_EXE_PATH=$OLLAMA_PLUGIN_EXE_PATH|" .env
+          sed -i "s|OLLAMA_EMBEDDING_EXE_PATH=.*|OLLAMA_EMBEDDING_EXE_PATH=$OLLAMA_EMBEDDING_EXE_PATH|" .env
           # model
-          sed -i "s|LOCAL_AI_MODEL_DIR=.*|LOCAL_AI_MODEL_DIR=$ABS_PATH|" .env
-          sed -i 's|LOCAL_AI_CHAT_MODEL_NAME=.*|LOCAL_AI_CHAT_MODEL_NAME=tinyllama.gguf|' .env
-          sed -i 's|LOCAL_AI_EMBEDDING_MODEL_NAME=.*|LOCAL_AI_EMBEDDING_MODEL_NAME=all-MiniLM-L12-v2.F16.gguf|' .env
+          sed -i "s|OLLAMA_SERVER_URL=.*|OLLAMA_SERVER_URL=$ABS_PATH|" .env
+          sed -i 's|OLLAMA_CHAT_MODEL_NAME=.*|OLLAMA_CHAT_MODEL_NAME=tinyllama.gguf|' .env
+          sed -i 's|OLLAMA_EMBEDDING_MODEL_NAME=.*|OLLAMA_EMBEDDING_MODEL_NAME=all-MiniLM-L12-v2.F16.gguf|' .env
           cat .env
         shell: bash
 
@@ -112,18 +112,18 @@ jobs:
           $ErrorActionPreference = 'Stop'
           try {
             $ABS_PATH = $PWD.Path
-            $chat_bin_path = Join-Path $ABS_PATH 'AppFlowyAI' 'appflowy_ai_plugin.exe'
-            $embedding_bin_path = Join-Path $ABS_PATH 'AppFlowyAI' 'appflowy_embedding_plugin.exe'
+            $OLLAMA_PLUGIN_EXE_PATH = Join-Path $ABS_PATH 'AppFlowyAI' 'appflowy_ai_plugin.exe'
+            $OLLAMA_EMBEDDING_EXE_PATH = Join-Path $ABS_PATH 'AppFlowyAI' 'appflowy_embedding_plugin.exe'
 
             Copy-Item -Path 'dev.env' -Destination '.env' -Force
 
             $envContent = Get-Content '.env'
             $envContent = $envContent -replace 'RUST_LOG=.*', 'RUST_LOG=trace'
-            $envContent = $envContent -replace 'CHAT_BIN_PATH=.*', "CHAT_BIN_PATH=$chat_bin_path"
-            $envContent = $envContent -replace 'EMBEDDING_BIN_PATH=.*', "EMBEDDING_BIN_PATH=$embedding_bin_path"
-            $envContent = $envContent -replace 'LOCAL_AI_MODEL_DIR=.*', "LOCAL_AI_MODEL_DIR=$ABS_PATH"
-            $envContent = $envContent -replace 'LOCAL_AI_CHAT_MODEL_NAME=.*', 'LOCAL_AI_CHAT_MODEL_NAME=tinyllama.gguf'
-            $envContent = $envContent -replace 'LOCAL_AI_EMBEDDING_MODEL_NAME=.*', 'LOCAL_AI_EMBEDDING_MODEL_NAME=all-MiniLM-L12-v2.F16.gguf'
+            $envContent = $envContent -replace 'OLLAMA_PLUGIN_EXE_PATH=.*', "OLLAMA_PLUGIN_EXE_PATH=$OLLAMA_PLUGIN_EXE_PATH"
+            $envContent = $envContent -replace 'OLLAMA_EMBEDDING_EXE_PATH=.*', "OLLAMA_EMBEDDING_EXE_PATH=$OLLAMA_EMBEDDING_EXE_PATH"
+            $envContent = $envContent -replace 'OLLAMA_SERVER_URL=.*', "OLLAMA_SERVER_URL=$ABS_PATH"
+            $envContent = $envContent -replace 'OLLAMA_CHAT_MODEL_NAME=.*', 'OLLAMA_CHAT_MODEL_NAME=tinyllama.gguf'
+            $envContent = $envContent -replace 'OLLAMA_EMBEDDING_MODEL_NAME=.*', 'OLLAMA_EMBEDDING_MODEL_NAME=all-MiniLM-L12-v2.F16.gguf'
 
             $envContent | Set-Content '.env'
             Get-Content '.env'

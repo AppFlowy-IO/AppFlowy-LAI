@@ -34,11 +34,7 @@ impl AIPluginOperation {
     params: JsonValue,
   ) -> Result<T::ValueType, PluginError> {
     let plugin = self.get_plugin()?;
-    let mut request = json!({ "method": method });
-    request
-      .as_object_mut()
-      .unwrap()
-      .extend(params.as_object().unwrap().clone());
+    let request = json!({ "method": method, "params": params });
     plugin.async_request::<T>("handle", &request).await
   }
 
@@ -95,9 +91,8 @@ impl AIPluginOperation {
   ) -> Result<ReceiverStream<Result<serde_json::Value, PluginError>>, PluginError> {
     let plugin = self.get_plugin()?;
     let params = json!({
-        "chat_id": chat_id,
         "method": "stream_answer_v2",
-        "params": { "content": message, "metadata": metadata }
+        "params": {"chat_id": chat_id, "data": {"content": message}, "metadata": metadata}
     });
     plugin.stream_request::<ChatStreamResponseV2Parser>("handle", &params)
   }
@@ -305,3 +300,27 @@ impl ResponseParser for DatabaseTranslateResponseParser {
       .ok_or(RemoteError::ParseResponse(json))
   }
 }
+
+// async fn collect_answer(
+//   mut stream: QuestionStream,
+//   stop_when_num_of_char: Option<usize>,
+// ) -> String {
+//   let mut answer = String::new();
+//   let mut num_of_char: usize = 0;
+//   while let Some(value) = stream.next().await {
+//     num_of_char += match value.unwrap() {
+//       QuestionStreamValue::Answer { value } => {
+//         answer.push_str(&value);
+//         value.len()
+//       },
+//       QuestionStreamValue::Metadata { .. } => 0,
+//       QuestionStreamValue::KeepAlive => 0,
+//     };
+//     if let Some(stop_when_num_of_char) = stop_when_num_of_char {
+//       if num_of_char >= stop_when_num_of_char {
+//         break;
+//       }
+//     }
+//   }
+//   answer
+// }

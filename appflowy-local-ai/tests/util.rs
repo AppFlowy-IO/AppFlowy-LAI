@@ -1,6 +1,6 @@
 use anyhow::Result;
-use appflowy_local_ai::chat_plugin::{AIPluginConfig, AppFlowyLocalAI};
-use appflowy_local_ai::embedding_plugin::{EmbeddingPluginConfig, LocalEmbedding};
+use appflowy_local_ai::embedding_plugin::{EmbeddingPlugin, EmbeddingPluginConfig};
+use appflowy_local_ai::ollama_plugin::{OllamaAIPlugin, OllamaPluginConfig};
 use appflowy_plugin::error::PluginError;
 use appflowy_plugin::manager::PluginManager;
 
@@ -16,60 +16,59 @@ use tracing_subscriber::EnvFilter;
 
 pub struct LocalAITest {
   config: LocalAIConfiguration,
-  pub local_ai: AppFlowyLocalAI,
-  pub embedding_manager: LocalEmbedding,
+  pub ollama_plugin: OllamaAIPlugin,
+  pub embedding_plugin: EmbeddingPlugin,
 }
 
 impl LocalAITest {
   pub fn new() -> Result<Self> {
     let config = LocalAIConfiguration::new()?;
     let sidecar = Arc::new(PluginManager::new());
-    let chat_manager = AppFlowyLocalAI::new(sidecar.clone());
-    let embedding_manager = LocalEmbedding::new(sidecar);
+    let ollama_plugin = OllamaAIPlugin::new(sidecar.clone());
+    let embedding_plugin = EmbeddingPlugin::new(sidecar);
     Ok(Self {
       config,
-      local_ai: chat_manager,
-      embedding_manager,
+      ollama_plugin,
+      embedding_plugin,
     })
   }
 
   pub async fn init_chat_plugin(&self) {
-    let mut config = AIPluginConfig::new(
-      self.config.chat_bin_path.clone(),
-      self.config.chat_model_absolute_path(),
+    let mut config = OllamaPluginConfig::new(
+      self.config.ollama_plugin_exe.clone(),
+      self.config.chat_model_name.clone(),
+      self.config.embedding_model_name.clone(),
+      Some(self.config.ollama_server_url.clone()),
     )
-    .unwrap()
-    .with_device("cpu");
-
-    if let Some(related_question_model) = self.config.related_question_model_absolute_path() {
-      config = config.with_related_model_path(related_question_model);
-    }
+    .unwrap();
 
     let persist_dir = tempfile::tempdir().unwrap().path().to_path_buf();
-    config
-      .set_rag_enabled(&self.config.embedding_model_absolute_path(), &persist_dir)
-      .unwrap();
+    config.set_rag_enabled(&persist_dir).unwrap();
 
-    self.local_ai.init_chat_plugin(config).await.unwrap();
+    self.ollama_plugin.init_chat_plugin(config).await.unwrap();
   }
 
   pub async fn init_embedding_plugin(&self) {
     let temp_dir = tempfile::tempdir().unwrap().path().to_path_buf();
     let config = EmbeddingPluginConfig::new(
-      self.config.embedding_bin_path.clone(),
-      self.config.embedding_model_absolute_path(),
+      self.config.embedding_plugin_exe.clone(),
+      self.config.embedding_model_name.clone(),
       Some(temp_dir),
     )
     .unwrap();
     self
-      .embedding_manager
+      .embedding_plugin
       .init_embedding_plugin(config)
       .await
       .unwrap();
   }
 
   pub async fn send_chat_message(&self, chat_id: &str, message: &str) -> String {
-    self.local_ai.ask_question(chat_id, message).await.unwrap()
+    self
+      .ollama_plugin
+      .ask_question(chat_id, message)
+      .await
+      .unwrap()
   }
 
   pub async fn stream_chat_message(
@@ -78,15 +77,15 @@ impl LocalAITest {
     message: &str,
   ) -> ReceiverStream<Result<Value, PluginError>> {
     self
-      .local_ai
-      .stream_question(chat_id, message, json!([]))
+      .ollama_plugin
+      .stream_question(chat_id, message, json!({}))
       .await
       .unwrap()
   }
 
   pub async fn generate_embedding(&self, message: &str) -> Vec<Vec<f64>> {
     self
-      .embedding_manager
+      .embedding_plugin
       .generate_embedding(message)
       .await
       .unwrap()
@@ -94,12 +93,12 @@ impl LocalAITest {
 
   pub async fn calculate_similarity(&self, input: &str, expected: &str) -> f64 {
     let left = self
-      .embedding_manager
+      .embedding_plugin
       .generate_embedding(input)
       .await
       .unwrap();
     let right = self
-      .embedding_manager
+      .embedding_plugin
       .generate_embedding(expected)
       .await
       .unwrap();
@@ -119,11 +118,10 @@ fn flatten_vec(vec: Vec<Vec<f64>>) -> Vec<f64> {
 }
 
 pub struct LocalAIConfiguration {
-  model_dir: String,
-  chat_bin_path: PathBuf,
-  chat_model: String,
-  related_question_model: Option<String>,
-  embedding_bin_path: PathBuf,
+  ollama_server_url: String,
+  ollama_plugin_exe: PathBuf,
+  embedding_plugin_exe: PathBuf,
+  chat_model_name: String,
   embedding_model_name: String,
 }
 
@@ -133,38 +131,19 @@ impl LocalAIConfiguration {
     setup_log();
 
     // load from .env
-    let model_dir = dotenv::var("LOCAL_AI_MODEL_DIR")?;
-    let chat_bin_path = PathBuf::from(dotenv::var("CHAT_BIN_PATH")?);
-    let chat_model = dotenv::var("LOCAL_AI_CHAT_MODEL_NAME")?;
-    let related_question_model = dotenv::var("LOCAL_AI_RELATED_QUESTION_NAME").ok();
-    let embedding_bin_path = PathBuf::from(dotenv::var("EMBEDDING_BIN_PATH")?);
-    let embedding_model_name = dotenv::var("LOCAL_AI_EMBEDDING_MODEL_NAME")?;
+    let ollama_server_url = dotenv::var("OLLAMA_SERVER_URL")?;
+    let ollama_plugin_exe = PathBuf::from(dotenv::var("OLLAMA_PLUGIN_EXE_PATH")?);
+    let chat_model_name = dotenv::var("OLLAMA_CHAT_MODEL_NAME")?;
+    let embedding_plugin_exe = PathBuf::from(dotenv::var("OLLAMA_EMBEDDING_EXE_PATH")?);
+    let embedding_model_name = dotenv::var("OLLAMA_EMBEDDING_MODEL_NAME")?;
 
     Ok(Self {
-      model_dir,
-      chat_bin_path,
-      chat_model,
-      related_question_model,
-      embedding_bin_path,
+      ollama_server_url,
+      ollama_plugin_exe,
+      chat_model_name,
+      embedding_plugin_exe,
       embedding_model_name,
     })
-  }
-
-  pub fn chat_model_absolute_path(&self) -> PathBuf {
-    let path = PathBuf::from(&self.model_dir);
-    path.join(&self.chat_model)
-  }
-
-  pub fn related_question_model_absolute_path(&self) -> Option<PathBuf> {
-    self.related_question_model.as_ref().map(|model| {
-      let path = PathBuf::from(&self.model_dir);
-      path.join(model)
-    })
-  }
-
-  pub fn embedding_model_absolute_path(&self) -> PathBuf {
-    let path = PathBuf::from(&self.model_dir);
-    path.join(&self.embedding_model_name)
   }
 }
 

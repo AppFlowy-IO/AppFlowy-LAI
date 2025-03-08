@@ -35,19 +35,19 @@ jobs:
         run: |
           ls
           ABS_PATH=$(pwd)
-          chat_bin_path=$ABS_PATH/AppFlowyAI/AppFlowyAI.app/Contents/MacOS/appflowy_ai_plugin
-          embedding_bin_path=$ABS_PATH/AppFlowyAI/AppFlowyAI.app/Contents/MacOS/appflowy_embedding_plugin
+          OLLAMA_PLUGIN_EXE_PATH=$ABS_PATH/AppFlowyAI/AppFlowyAI.app/Contents/MacOS/appflowy_ai_plugin
+          OLLAMA_EMBEDDING_EXE_PATH=$ABS_PATH/AppFlowyAI/AppFlowyAI.app/Contents/MacOS/appflowy_embedding_plugin
           
           cp dev.env .env
           sed -i '' 's|RUST_LOG=.*|RUST_LOG=trace|' .env
           
           # binary
-          sed -i '' "s|CHAT_BIN_PATH=.*|CHAT_BIN_PATH=$chat_bin_path|" .env
-          sed -i '' "s|EMBEDDING_BIN_PATH=.*|EMBEDDING_BIN_PATH=$embedding_bin_path|" .env
+          sed -i '' "s|OLLAMA_PLUGIN_EXE_PATH=.*|OLLAMA_PLUGIN_EXE_PATH=$OLLAMA_PLUGIN_EXE_PATH|" .env
+          sed -i '' "s|OLLAMA_EMBEDDING_EXE_PATH=.*|OLLAMA_EMBEDDING_EXE_PATH=$OLLAMA_EMBEDDING_EXE_PATH|" .env
           # model
-          sed -i '' "s|LOCAL_AI_MODEL_DIR=.*|LOCAL_AI_MODEL_DIR=/Users/weidongfu/Documents/LLMModel|" .env
-          sed -i '' 's|LOCAL_AI_CHAT_MODEL_NAME=.*|LOCAL_AI_CHAT_MODEL_NAME=Mistral-7B-Instruct-v0.3.Q4_K_M.gguf|' .env
-          sed -i '' 's|LOCAL_AI_EMBEDDING_MODEL_NAME=.*|LOCAL_AI_EMBEDDING_MODEL_NAME=all-MiniLM-L12-v2.Q4_0.gguf|' .env
+          sed -i '' "s|OLLAMA_SERVER_URL=.*|OLLAMA_SERVER_URL=/Users/weidongfu/Documents/LLMModel|" .env
+          sed -i '' 's|OLLAMA_CHAT_MODEL_NAME=.*|OLLAMA_CHAT_MODEL_NAME=Mistral-7B-Instruct-v0.3.Q4_K_M.gguf|' .env
+          sed -i '' 's|OLLAMA_EMBEDDING_MODEL_NAME=.*|OLLAMA_EMBEDDING_MODEL_NAME=all-MiniLM-L12-v2.Q4_0.gguf|' .env
           cat .env
         shell: bash
 
