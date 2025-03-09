@@ -36,7 +36,7 @@ pub struct OllamaAIPlugin {
 
 impl OllamaAIPlugin {
   pub fn new(plugin_manager: Arc<PluginManager>) -> Self {
-    let (running_state, rx) = tokio::sync::watch::channel(RunningState::Initialization);
+    let (running_state, rx) = tokio::sync::watch::channel(RunningState::ReadyToConnect);
     Self {
       plugin_manager,
       plugin_config: Default::default(),
@@ -230,13 +230,6 @@ impl OllamaAIPlugin {
 
   #[instrument(skip_all, err)]
   pub async fn init_chat_plugin(&self, config: OllamaPluginConfig) -> Result<()> {
-    if let Some(existing_config) = self.plugin_config.read().await.as_ref() {
-      trace!(
-        "[AI Plugin] Already initialized with config: {:?}",
-        existing_config
-      );
-      return Ok(());
-    }
     // Check if initialization is already in progress.
     if self.init_in_progress.load(Ordering::SeqCst) {
       trace!("[AI Plugin] Initialization already in progress, returning immediately");

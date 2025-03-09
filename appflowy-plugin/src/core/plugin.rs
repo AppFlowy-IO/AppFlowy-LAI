@@ -63,7 +63,7 @@ pub struct RpcCtx {
 
 #[derive(Debug, Clone)]
 pub enum RunningState {
-  Initialization,
+  ReadyToConnect,
   /// The plugin is in the process of establishing a connection
   Connecting,
   /// The plugin has successfully established a connection
@@ -92,7 +92,7 @@ impl RunningState {
       RunningState::Running { plugin_id } => Some(*plugin_id),
       RunningState::Stopped { plugin_id } => Some(*plugin_id),
       RunningState::UnexpectedStop { plugin_id } => Some(*plugin_id),
-      RunningState::Initialization => None,
+      RunningState::ReadyToConnect => None,
     }
   }
 

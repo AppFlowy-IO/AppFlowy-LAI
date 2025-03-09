@@ -29,7 +29,7 @@ pub struct EmbeddingPlugin {
 
 impl EmbeddingPlugin {
   pub fn new(plugin_manager: Arc<PluginManager>) -> Self {
-    let (running_state, rx) = tokio::sync::watch::channel(RunningState::Initialization);
+    let (running_state, rx) = tokio::sync::watch::channel(RunningState::ReadyToConnect);
     Self {
       plugin_manager,
       plugin_config: Default::default(),
