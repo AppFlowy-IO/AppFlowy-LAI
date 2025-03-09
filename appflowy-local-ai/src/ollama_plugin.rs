@@ -7,13 +7,14 @@ use appflowy_plugin::core::plugin::{
 };
 use appflowy_plugin::error::PluginError;
 use appflowy_plugin::manager::PluginManager;
-use appflowy_plugin::util::get_operating_system;
+
 use bytes::Bytes;
 
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Weak};
 use std::time::Duration;
 use tokio::io;
@@ -30,6 +31,7 @@ pub struct OllamaAIPlugin {
   #[allow(dead_code)]
   // keep at least one receiver that make sure the sender can receive value
   running_state_rx: RunningStateReceiver,
+  init_in_progress: AtomicBool,
 }
 
 impl OllamaAIPlugin {
@@ -40,6 +42,7 @@ impl OllamaAIPlugin {
       plugin_config: Default::default(),
       running_state: Arc::new(running_state),
       running_state_rx: rx,
+      init_in_progress: AtomicBool::new(false),
     }
   }
 
@@ -227,57 +230,70 @@ impl OllamaAIPlugin {
 
   #[instrument(skip_all, err)]
   pub async fn init_chat_plugin(&self, config: OllamaPluginConfig) -> Result<()> {
-    let state = self.running_state.borrow().clone();
-    if state.is_ready() {
-      if let Some(existing_config) = self.plugin_config.read().await.as_ref() {
-        trace!(
-          "[AI Plugin] existing config: {:?}, new config:{:?}",
-          existing_config,
-          config
-        );
+    if let Some(existing_config) = self.plugin_config.read().await.as_ref() {
+      trace!(
+        "[AI Plugin] Already initialized with config: {:?}",
+        existing_config
+      );
+      return Ok(());
+    }
+    // Check if initialization is already in progress.
+    if self.init_in_progress.load(Ordering::SeqCst) {
+      trace!("[AI Plugin] Initialization already in progress, returning immediately");
+      return Ok(());
+    }
+    // Attempt to mark initialization as in progress.
+    if self
+      .init_in_progress
+      .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+      .is_err()
+    {
+      trace!("[AI Plugin] Initialization already in progress (race), returning immediately");
+      return Ok(());
+    }
+
+    // Proceed with initialization.
+    let result = async {
+      if let Err(err) = self.destroy_chat_plugin().await {
+        error!("[AI Plugin] Failed to destroy plugin: {:?}", err);
       }
+      trace!("[AI Plugin] Creating chat plugin with config: {:?}", config);
+      let plugin_info = PluginInfo {
+        name: "ollama_ai_plugin".to_string(),
+        exec_path: config.executable_path.clone(),
+      };
+      let plugin_id = self
+        .plugin_manager
+        .create_plugin(plugin_info, self.running_state.clone())
+        .await?;
+
+      // Set up plugin parameters.
+      let mut params = json!({});
+      params["verbose"] = json!(config.verbose);
+      params["server_url"] = json!(config.server_url);
+      params["model_name"] = json!(config.chat_model_name);
+
+      if let Some(persist_directory) = config.persist_directory.clone() {
+        params["vectorstore_config"] = json!({
+          "model_name": config.embedding_model_name,
+          "persist_directory": persist_directory,
+        });
+      }
+
+      info!(
+        "[AI Plugin] Setting up chat plugin: {:?}, params: {:?}",
+        plugin_id, params
+      );
+      let plugin = self.plugin_manager.init_plugin(plugin_id, params).await?;
+      info!("[AI Plugin] {} setup success", plugin);
+      self.plugin_config.write().await.replace(config);
+      Ok(())
     }
+    .await;
 
-    let _system = get_operating_system();
-    // Initialize chat plugin if the config is different
-    // If the OLLAMA_PLUGIN_EXE_PATH is different, remove the old plugin
-    if let Err(err) = self.destroy_chat_plugin().await {
-      error!("[AI Plugin] failed to destroy plugin: {:?}", err);
-    }
-
-    // create new plugin
-    trace!("[AI Plugin] create chat plugin: {:?}", config);
-    let plugin_info = PluginInfo {
-      name: "ollama_ai_plugin".to_string(),
-      exec_path: config.executable_path.clone(),
-    };
-    let plugin_id = self
-      .plugin_manager
-      .create_plugin(plugin_info, self.running_state.clone())
-      .await?;
-
-    // init plugin
-    trace!("[AI Plugin] init chat plugin model: {:?}", plugin_id);
-    let mut params = json!({});
-    params["verbose"] = json!(config.verbose);
-    params["server_url"] = json!(config.server_url);
-    params["model_name"] = json!(config.chat_model_name);
-
-    if let Some(persist_directory) = config.persist_directory.clone() {
-      params["vectorstore_config"] = json!({
-        "model_name": config.embedding_model_name,
-        "persist_directory": persist_directory,
-      });
-    }
-
-    info!(
-      "[AI Plugin] setup chat plugin: {:?}, params: {:?}",
-      plugin_id, params
-    );
-    let plugin = self.plugin_manager.init_plugin(plugin_id, params).await?;
-    info!("[AI Plugin] {} setup success", plugin);
-    self.plugin_config.write().await.replace(config);
-    Ok(())
+    // Clear the initialization flag regardless of success or failure.
+    self.init_in_progress.store(false, Ordering::SeqCst);
+    result
   }
 
   /// Waits for the plugin to be ready.
