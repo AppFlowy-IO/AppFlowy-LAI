@@ -254,7 +254,7 @@ impl OllamaAIPlugin {
       let plugin_info = PluginInfo {
         name: "ollama_ai_plugin".to_string(),
         exec_path: config.executable_path.clone(),
-        exec_command: "".to_string(),
+        exec_command: config.executable_command.clone(),
       };
       let plugin_id = self
         .plugin_manager
@@ -345,6 +345,7 @@ impl OllamaAIPlugin {
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct OllamaPluginConfig {
   pub executable_path: PathBuf,
+  pub executable_command: String,
   pub chat_model_name: String,
   pub embedding_model_name: String,
   pub server_url: String,
@@ -355,18 +356,14 @@ pub struct OllamaPluginConfig {
 impl OllamaPluginConfig {
   pub fn new(
     executable_path: PathBuf,
+    executable_command: String,
     chat_model_name: String,
     embedding_model_name: String,
     server_url: Option<String>,
   ) -> Result<Self> {
-    if !executable_path.exists() {
-      return Err(anyhow!(
-        "executable path does not exist: {:?}",
-        executable_path
-      ));
-    }
     Ok(Self {
       executable_path,
+      executable_command,
       chat_model_name,
       embedding_model_name,
       persist_directory: None,

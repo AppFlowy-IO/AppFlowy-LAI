@@ -37,6 +37,7 @@ impl LocalAITest {
   pub async fn init_chat_plugin(&self) {
     let mut config = OllamaPluginConfig::new(
       self.config.ollama_plugin_exe.clone(),
+      self.config.ollama_plugin_command.clone(),
       self.config.chat_model_name.clone(),
       self.config.embedding_model_name.clone(),
       Some(self.config.ollama_server_url.clone()),
@@ -121,6 +122,7 @@ fn flatten_vec(vec: Vec<Vec<f64>>) -> Vec<f64> {
 pub struct LocalAIConfiguration {
   ollama_server_url: String,
   ollama_plugin_exe: PathBuf,
+  ollama_plugin_command: String,
   embedding_plugin_exe: PathBuf,
   chat_model_name: String,
   embedding_model_name: String,
@@ -144,6 +146,7 @@ impl LocalAIConfiguration {
       chat_model_name,
       embedding_plugin_exe,
       embedding_model_name,
+      ollama_plugin_command: "ollama_ai_plugin".to_string(),
     })
   }
 }
