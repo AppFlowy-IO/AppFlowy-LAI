@@ -46,7 +46,7 @@ impl LocalAITest {
     let persist_dir = tempfile::tempdir().unwrap().path().to_path_buf();
     config.set_rag_enabled(&persist_dir).unwrap();
 
-    self.ollama_plugin.init_chat_plugin(config).await.unwrap();
+    self.ollama_plugin.init_plugin(config).await.unwrap();
   }
 
   pub async fn init_embedding_plugin(&self) {

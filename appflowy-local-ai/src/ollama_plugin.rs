@@ -229,7 +229,7 @@ impl OllamaAIPlugin {
   }
 
   #[instrument(skip_all, err)]
-  pub async fn init_chat_plugin(&self, config: OllamaPluginConfig) -> Result<()> {
+  pub async fn init_plugin(&self, config: OllamaPluginConfig) -> Result<()> {
     // Check if initialization is already in progress.
     if self.init_in_progress.load(Ordering::SeqCst) {
       trace!("[AI Plugin] Initialization already in progress, returning immediately");
