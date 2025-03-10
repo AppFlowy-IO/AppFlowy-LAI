@@ -254,6 +254,7 @@ impl OllamaAIPlugin {
       let plugin_info = PluginInfo {
         name: "ollama_ai_plugin".to_string(),
         exec_path: config.executable_path.clone(),
+        exec_command: "".to_string(),
       };
       let plugin_id = self
         .plugin_manager

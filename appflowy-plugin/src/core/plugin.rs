@@ -1,6 +1,8 @@
 use crate::error::PluginError;
 use crate::manager::WeakPluginState;
 use std::fmt::{Display, Formatter};
+use std::fs;
+use std::process::Command;
 
 use crate::core::parser::ResponseParser;
 use crate::core::rpc_loop::RpcLoop;
@@ -203,6 +205,7 @@ impl Plugin {
 pub struct PluginInfo {
   pub name: String,
   pub exec_path: PathBuf,
+  pub exec_command: String,
 }
 
 pub(crate) async fn start_plugin_process(
@@ -213,18 +216,20 @@ pub(crate) async fn start_plugin_process(
 ) -> Result<(), anyhow::Error> {
   trace!("start plugin process: {:?}, {:?}", id, plugin_info);
   let (tx, ret) = tokio::sync::oneshot::channel();
+
   let spawn_result = thread::Builder::new()
     .name(format!("<{}> core host thread", &plugin_info.name))
     .spawn(move || {
       info!("Load {} plugin", &plugin_info.name);
+      let mut command = if fs::metadata(&plugin_info.exec_path).is_ok() {
+        // If exec_path exists, use it to start the process
+        Command::new(&plugin_info.exec_path)
+      } else {
+        // Otherwise, use exec_command
+        Command::new(&plugin_info.exec_command)
+      };
 
-      // #[cfg(target_os = "macos")]
-      // handle_macos_security_check(&plugin_info);
-
-      let child = std::process::Command::new(&plugin_info.exec_path)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .spawn();
+      let child = command.stdin(Stdio::piped()).stdout(Stdio::piped()).spawn();
 
       match child {
         Ok(mut child) => {
@@ -266,7 +271,7 @@ pub(crate) async fn start_plugin_process(
         Err(err) => {
           let _ = tx.send(());
           error!("failed to start plugin process: {:?}", err);
-          state.plugin_connect(Err(err))
+          state.plugin_connect(Err(err));
         },
       }
     });
@@ -278,7 +283,6 @@ pub(crate) async fn start_plugin_process(
   ret.await?;
   Ok(())
 }
-
 #[allow(dead_code)]
 #[cfg(unix)]
 async fn ensure_executable(exec_path: &std::path::Path) -> Result<(), anyhow::Error> {
