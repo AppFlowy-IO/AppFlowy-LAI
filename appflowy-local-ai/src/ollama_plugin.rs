@@ -181,8 +181,10 @@ impl OllamaAIPlugin {
   }
 
   #[instrument(skip_all, err)]
-  pub async fn destroy_chat_plugin(&self) -> Result<()> {
+  pub async fn destroy_plugin(&self) -> Result<()> {
     let plugin_id = self.running_state.borrow().plugin_id();
+    info!("[AI Plugin]: destroy plugin: {:?}", plugin_id);
+
     if let Some(plugin_id) = plugin_id {
       if let Err(err) = self.plugin_manager.remove_plugin(plugin_id).await {
         error!("remove plugin failed: {:?}", err);
@@ -248,7 +250,7 @@ impl OllamaAIPlugin {
 
     // Proceed with initialization.
     let result = async {
-      if let Err(err) = self.destroy_chat_plugin().await {
+      if let Err(err) = self.destroy_plugin().await {
         error!("[AI Plugin] Failed to destroy plugin: {:?}", err);
       }
       trace!("[AI Plugin] Creating chat plugin with config: {:?}", config);

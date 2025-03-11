@@ -72,7 +72,7 @@ impl PluginManager {
       )));
     }
 
-    info!("[RPC] removing plugin {:?}", id);
+    info!("[AI Plugin] removing plugin {:?}", id);
     self.state.lock().plugin_disconnect(id, Ok(()));
     Ok(())
   }
