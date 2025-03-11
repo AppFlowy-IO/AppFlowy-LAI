@@ -1,5 +1,4 @@
 use anyhow::Result;
-use appflowy_local_ai::embedding_plugin::{EmbeddingPlugin, EmbeddingPluginConfig};
 use appflowy_local_ai::ollama_plugin::{OllamaAIPlugin, OllamaPluginConfig};
 use appflowy_plugin::error::PluginError;
 use appflowy_plugin::manager::PluginManager;
@@ -18,7 +17,6 @@ use tracing_subscriber::EnvFilter;
 pub struct LocalAITest {
   config: LocalAIConfiguration,
   pub ollama_plugin: OllamaAIPlugin,
-  pub embedding_plugin: EmbeddingPlugin,
 }
 
 impl LocalAITest {
@@ -26,11 +24,9 @@ impl LocalAITest {
     let config = LocalAIConfiguration::new()?;
     let sidecar = Arc::new(PluginManager::new());
     let ollama_plugin = OllamaAIPlugin::new(sidecar.clone());
-    let embedding_plugin = EmbeddingPlugin::new(sidecar);
     Ok(Self {
       config,
       ollama_plugin,
-      embedding_plugin,
     })
   }
 
@@ -48,21 +44,6 @@ impl LocalAITest {
     config.set_rag_enabled(&persist_dir).unwrap();
 
     self.ollama_plugin.init_plugin(config).await.unwrap();
-  }
-
-  pub async fn init_embedding_plugin(&self) {
-    let temp_dir = tempfile::tempdir().unwrap().path().to_path_buf();
-    let config = EmbeddingPluginConfig::new(
-      self.config.embedding_plugin_exe.clone(),
-      self.config.embedding_model_name.clone(),
-      Some(temp_dir),
-    )
-    .unwrap();
-    self
-      .embedding_plugin
-      .init_embedding_plugin(config)
-      .await
-      .unwrap();
   }
 
   pub async fn send_chat_message(&self, chat_id: &str, message: &str) -> String {
@@ -87,20 +68,16 @@ impl LocalAITest {
 
   pub async fn generate_embedding(&self, message: &str) -> Vec<Vec<f64>> {
     self
-      .embedding_plugin
+      .ollama_plugin
       .generate_embedding(message)
       .await
       .unwrap()
   }
 
   pub async fn calculate_similarity(&self, input: &str, expected: &str) -> f64 {
-    let left = self
-      .embedding_plugin
-      .generate_embedding(input)
-      .await
-      .unwrap();
+    let left = self.ollama_plugin.generate_embedding(input).await.unwrap();
     let right = self
-      .embedding_plugin
+      .ollama_plugin
       .generate_embedding(expected)
       .await
       .unwrap();
@@ -123,6 +100,7 @@ pub struct LocalAIConfiguration {
   ollama_server_url: String,
   ollama_plugin_exe: PathBuf,
   ollama_plugin_command: String,
+  #[allow(dead_code)]
   embedding_plugin_exe: PathBuf,
   chat_model_name: String,
   embedding_model_name: String,

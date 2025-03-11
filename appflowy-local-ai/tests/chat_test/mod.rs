@@ -19,7 +19,6 @@ async fn load_chat_model_test() {
     .await;
   eprintln!("chat response: {:?}", resp);
 
-  test.init_embedding_plugin().await;
   let score = test.calculate_similarity(&resp, "Hello").await;
   assert!(score > 0.9, "score: {}", score);
 }
@@ -28,7 +27,6 @@ async fn load_chat_model_test() {
 async fn ci_chat_stream_test() {
   let test = LocalAITest::new().unwrap();
   test.init_chat_plugin().await;
-  test.init_embedding_plugin().await;
 
   let chat_plugin = test
     .ollama_plugin
@@ -66,7 +64,6 @@ async fn ci_chat_stream_test() {
 async fn ci_completion_text_test() {
   let test = LocalAITest::new().unwrap();
   test.init_chat_plugin().await;
-  test.init_embedding_plugin().await;
 
   let chat_plugin = test
     .ollama_plugin
@@ -104,7 +101,6 @@ async fn ci_completion_text_test() {
 async fn ci_chat_with_pdf() {
   let test = LocalAITest::new().unwrap();
   test.init_chat_plugin().await;
-  test.init_embedding_plugin().await;
   let chat_id = uuid::Uuid::new_v4().to_string();
   let pdf = get_asset_path("AppFlowy_Values.pdf");
   test
@@ -136,7 +132,6 @@ async fn ci_chat_with_pdf() {
 async fn ci_database_row_test() {
   let test = LocalAITest::new().unwrap();
   test.init_chat_plugin().await;
-  test.init_embedding_plugin().await;
 
   // summary
   let mut params = HashMap::new();

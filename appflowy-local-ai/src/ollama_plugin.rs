@@ -10,6 +10,7 @@ use appflowy_plugin::manager::PluginManager;
 
 use bytes::Bytes;
 
+use crate::embedding_ops::EmbeddingPluginOperation;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -288,6 +289,41 @@ impl OllamaAIPlugin {
     // Clear the initialization flag regardless of success or failure.
     self.init_in_progress.store(false, Ordering::SeqCst);
     result
+  }
+
+  pub async fn generate_embedding(&self, text: &str) -> Result<Vec<Vec<f64>>, PluginError> {
+    trace!("[AI Plugin] generate embedding for text: {}", text);
+    self.wait_until_plugin_ready().await?;
+    let plugin = self.get_ai_plugin().await?;
+    let operation = EmbeddingPluginOperation::new(plugin);
+    let embeddings = operation.embed_documents(text).await?;
+    Ok(embeddings)
+  }
+
+  pub async fn index(
+    &self,
+    text: &str,
+    metadata: HashMap<String, Value>,
+  ) -> Result<(), PluginError> {
+    trace!("[AI Plugin] generate embedding for text: {}", text);
+    self.wait_until_plugin_ready().await?;
+    let plugin = self.get_ai_plugin().await?;
+    let operation = EmbeddingPluginOperation::new(plugin);
+    operation.index_document(text, metadata).await?;
+    Ok(())
+  }
+
+  pub async fn similarity_search(
+    &self,
+    query: &str,
+    filter: HashMap<String, Value>,
+  ) -> Result<Vec<String>, PluginError> {
+    trace!("[Embedding Plugin] similarity search for query: {}", query);
+    self.wait_until_plugin_ready().await?;
+    let plugin = self.get_ai_plugin().await?;
+    let operation = EmbeddingPluginOperation::new(plugin);
+    let result = operation.similarity_search(query, filter).await?;
+    Ok(result)
   }
 
   /// Waits for the plugin to be ready.

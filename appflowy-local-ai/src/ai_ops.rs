@@ -57,12 +57,12 @@ impl AIPluginOperation {
     &self,
     chat_id: &str,
     message: &str,
-    rag_enabled: bool,
+    _rag_enabled: bool,
   ) -> Result<String, PluginError> {
     self
       .send_request::<ChatResponseParser>(
         "answer",
-        json!({ "chat_id": chat_id, "params": { "content": message, "rag_enabled": rag_enabled } }),
+        json!({ "chat_id": chat_id, "content": message }),
       )
       .await
   }

@@ -5,15 +5,15 @@ use std::collections::HashMap;
 #[tokio::test]
 async fn ci_generate_embedding_test() {
   let test = LocalAITest::new().unwrap();
-  test.init_embedding_plugin().await;
+  test.init_chat_plugin().await;
 
   let id = uuid::Uuid::new_v4().to_string();
   let mut metadata = HashMap::new();
   metadata.insert("id".to_string(), json!(id));
 
-  test.embedding_plugin.index("AppFlowy is an AI collaborative workspace where you achieve more without losing control of your data", metadata.clone()).await.unwrap();
+  test.ollama_plugin.index("AppFlowy is an AI collaborative workspace where you achieve more without losing control of your data", metadata.clone()).await.unwrap();
   let resp = test
-    .embedding_plugin
+    .ollama_plugin
     .similarity_search("AppFlowy", metadata)
     .await
     .unwrap();
