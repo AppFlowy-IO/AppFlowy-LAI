@@ -223,9 +223,11 @@ pub(crate) async fn start_plugin_process(
       info!("Load {} plugin", &plugin_info.name);
       let mut command = if fs::metadata(&plugin_info.exec_path).is_ok() {
         // If exec_path exists, use it to start the process
+        info!("[AI Plugin]: run plugin with exec_path: {:?}", &plugin_info.exec_path);
         Command::new(&plugin_info.exec_path)
       } else {
         // Otherwise, use exec_command
+        info!("[AI Plugin]: run plugin with command: {:?}", &plugin_info.exec_command);
         Command::new(&plugin_info.exec_command)
       };
 
