@@ -3,7 +3,7 @@ use crate::ai_ops::{
 };
 use anyhow::{anyhow, Result};
 use appflowy_plugin::core::plugin::{
-  Plugin, PluginInfo, RunningState, RunningStateReceiver, RunningStateSender,
+  Plugin, PluginId, PluginInfo, RunningState, RunningStateReceiver, RunningStateSender,
 };
 use appflowy_plugin::error::PluginError;
 use appflowy_plugin::manager::PluginManager;
@@ -15,7 +15,7 @@ use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
+
 use std::sync::{Arc, Weak};
 use std::time::Duration;
 use tokio::io;
@@ -32,7 +32,8 @@ pub struct OllamaAIPlugin {
   #[allow(dead_code)]
   // keep at least one receiver that make sure the sender can receive value
   running_state_rx: RunningStateReceiver,
-  init_in_progress: AtomicBool,
+  init_lock: tokio::sync::Mutex<()>,
+  plugin_id: tokio::sync::Mutex<Option<PluginId>>,
 }
 
 impl OllamaAIPlugin {
@@ -43,7 +44,8 @@ impl OllamaAIPlugin {
       plugin_config: Default::default(),
       running_state: Arc::new(running_state),
       running_state_rx: rx,
-      init_in_progress: AtomicBool::new(false),
+      init_lock: tokio::sync::Mutex::new(()),
+      plugin_id: Default::default(),
     }
   }
 
@@ -182,7 +184,7 @@ impl OllamaAIPlugin {
 
   #[instrument(skip_all, err)]
   pub async fn destroy_plugin(&self) -> Result<()> {
-    let plugin_id = self.running_state.borrow().plugin_id();
+    let plugin_id = self.plugin_id.lock().await.take();
     info!("[AI Plugin]: destroy plugin: {:?}", plugin_id);
 
     if let Some(plugin_id) = plugin_id {
@@ -190,7 +192,6 @@ impl OllamaAIPlugin {
         error!("remove plugin failed: {:?}", err);
       }
     }
-
     Ok(())
   }
 
@@ -231,66 +232,54 @@ impl OllamaAIPlugin {
     Ok(resp)
   }
 
-  #[instrument(skip_all, err)]
   pub async fn init_plugin(&self, config: OllamaPluginConfig) -> Result<()> {
-    // Check if initialization is already in progress.
-    if self.init_in_progress.load(Ordering::SeqCst) {
-      trace!("[AI Plugin] Initialization already in progress, returning immediately");
-      return Ok(());
+    // Try to acquire the initialization lock without waiting.
+    match self.init_lock.try_lock() {
+      Ok(_guard) => {
+        // We have the lock and can proceed with initialization.
+        if let Err(err) = self.destroy_plugin().await {
+          error!("[AI Plugin] Failed to destroy plugin: {:?}", err);
+        }
+        trace!("[AI Plugin] Creating chat plugin with config: {:?}", config);
+        let plugin_info = PluginInfo {
+          name: "ollama_ai_plugin".to_string(),
+          exec_path: config.executable_path.clone(),
+          exec_command: config.executable_command.clone(),
+        };
+        let plugin_id = self
+          .plugin_manager
+          .create_plugin(plugin_info, self.running_state.clone())
+          .await?;
+
+        // Set up plugin parameters.
+        let mut params = json!({});
+        params["verbose"] = json!(config.verbose);
+        params["server_url"] = json!(config.server_url);
+        params["model_name"] = json!(config.chat_model_name);
+
+        if let Some(persist_directory) = config.persist_directory.clone() {
+          params["vectorstore_config"] = json!({
+            "model_name": config.embedding_model_name,
+            "persist_directory": persist_directory,
+          });
+        }
+
+        info!(
+          "[AI Plugin] Setting up chat plugin: {:?}, params: {:?}",
+          plugin_id, params
+        );
+        self.plugin_id.lock().await.replace(plugin_id);
+        let plugin = self.plugin_manager.init_plugin(plugin_id, params).await?;
+        info!("[AI Plugin] {} setup success", plugin);
+        self.plugin_config.write().await.replace(config);
+        Ok(())
+      },
+      Err(_) => {
+        // Lock is already held – an initialization is in progress.
+        trace!("[AI Plugin] Initialization already in progress, returning immediately");
+        Ok(())
+      },
     }
-    // Attempt to mark initialization as in progress.
-    if self
-      .init_in_progress
-      .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
-      .is_err()
-    {
-      trace!("[AI Plugin] Initialization already in progress (race), returning immediately");
-      return Ok(());
-    }
-
-    // Proceed with initialization.
-    let result = async {
-      if let Err(err) = self.destroy_plugin().await {
-        error!("[AI Plugin] Failed to destroy plugin: {:?}", err);
-      }
-      trace!("[AI Plugin] Creating chat plugin with config: {:?}", config);
-      let plugin_info = PluginInfo {
-        name: "ollama_ai_plugin".to_string(),
-        exec_path: config.executable_path.clone(),
-        exec_command: config.executable_command.clone(),
-      };
-      let plugin_id = self
-        .plugin_manager
-        .create_plugin(plugin_info, self.running_state.clone())
-        .await?;
-
-      // Set up plugin parameters.
-      let mut params = json!({});
-      params["verbose"] = json!(config.verbose);
-      params["server_url"] = json!(config.server_url);
-      params["model_name"] = json!(config.chat_model_name);
-
-      if let Some(persist_directory) = config.persist_directory.clone() {
-        params["vectorstore_config"] = json!({
-          "model_name": config.embedding_model_name,
-          "persist_directory": persist_directory,
-        });
-      }
-
-      info!(
-        "[AI Plugin] Setting up chat plugin: {:?}, params: {:?}",
-        plugin_id, params
-      );
-      let plugin = self.plugin_manager.init_plugin(plugin_id, params).await?;
-      info!("[AI Plugin] {} setup success", plugin);
-      self.plugin_config.write().await.replace(config);
-      Ok(())
-    }
-    .await;
-
-    // Clear the initialization flag regardless of success or failure.
-    self.init_in_progress.store(false, Ordering::SeqCst);
-    result
   }
 
   pub async fn generate_embedding(&self, text: &str) -> Result<Vec<Vec<f64>>, PluginError> {
@@ -371,10 +360,13 @@ impl OllamaAIPlugin {
   /// A `Result<Weak<Plugin>>` containing a weak reference to the plugin.
   pub async fn get_ai_plugin(&self) -> Result<Weak<Plugin>, PluginError> {
     let plugin_id = self
-      .running_state
-      .borrow()
-      .plugin_id()
+      .plugin_id
+      .lock()
+      .await
+      .as_ref()
+      .cloned()
       .ok_or_else(|| PluginError::Internal(anyhow!("chat plugin not initialized")))?;
+
     let plugin = self.plugin_manager.get_plugin(plugin_id).await?;
     Ok(plugin)
   }

@@ -116,6 +116,7 @@ impl EmbeddingPlugin {
       .borrow()
       .plugin_id()
       .ok_or_else(|| anyhow!("Embedding plugin is not initialized yet"))?;
+
     let plugin = self.plugin_manager.get_plugin(plugin_id).await?;
     Ok(plugin)
   }

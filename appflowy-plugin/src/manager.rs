@@ -8,17 +8,20 @@ use crate::error::{PluginError, ReadError, RemoteError};
 use anyhow::anyhow;
 use parking_lot::Mutex;
 use serde_json::Value;
+use std::collections::HashMap;
 use std::io;
 
 use crate::util::{get_operating_system, OperatingSystem};
 use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::{Arc, Weak};
+use tokio::sync::RwLock;
 use tracing::{error, info, instrument, trace, warn};
 
 pub struct PluginManager {
   state: Arc<Mutex<PluginState>>,
   plugin_id_counter: Arc<AtomicI64>,
   operating_system: OperatingSystem,
+  running_plugins: RwLock<HashMap<String, PluginId>>,
 }
 
 impl Default for PluginManager {
@@ -35,6 +38,7 @@ impl PluginManager {
       })),
       plugin_id_counter: Arc::new(Default::default()),
       operating_system: get_operating_system(),
+      running_plugins: Default::default(),
     }
   }
 
@@ -48,7 +52,23 @@ impl PluginManager {
         "plugin not supported on this platform"
       )));
     }
+
+    if self
+      .running_plugins
+      .read()
+      .await
+      .contains_key(&plugin_info.name)
+    {
+      return Err(PluginError::Internal(anyhow!("plugin already running")));
+    }
+
     let plugin_id = PluginId::from(self.plugin_id_counter.fetch_add(1, Ordering::SeqCst));
+    self
+      .running_plugins
+      .write()
+      .await
+      .insert(plugin_info.name.clone(), plugin_id);
+
     let weak_state = WeakPluginState(Arc::downgrade(&self.state));
     start_plugin_process(plugin_info, plugin_id, weak_state, running_state).await?;
     Ok(plugin_id)
@@ -74,6 +94,15 @@ impl PluginManager {
 
     info!("[AI Plugin] removing plugin {:?}", id);
     self.state.lock().plugin_disconnect(id, Ok(()));
+
+    let mut running_plugins = self.running_plugins.write().await;
+    let key_to_remove = running_plugins
+      .iter()
+      .find(|(_name, plugin_id)| **plugin_id == id)
+      .map(|(name, _)| name.clone());
+    if let Some(name) = key_to_remove {
+      running_plugins.remove(&name);
+    }
     Ok(())
   }
 
