@@ -19,6 +19,9 @@ use std::time::Instant;
 use tokio::sync::watch;
 use tokio_stream::wrappers::{ReceiverStream, WatchStream};
 
+#[cfg(windows)]
+use winreg::{enums::*, RegKey};
+
 use tracing::{error, info, trace};
 
 #[derive(
@@ -369,10 +372,9 @@ pub fn handle_macos_security_check(plugin_info: &PluginInfo) {
 #[cfg(windows)]
 fn get_exec_command_path(exec_command: &str) -> Option<PathBuf> {
   let path_dirs = get_windows_path_dirs();
-  let plugin_exe = "ollama_ai_plugin.exe"; // Adjust name if needed
   path_dirs
     .iter()
-    .map(|dir| std::path::Path::new(dir).join(plugin_exe))
+    .map(|dir| std::path::Path::new(dir).join(exec_command))
     .find(|path| path.exists())
 }
 

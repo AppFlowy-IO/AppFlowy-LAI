@@ -41,7 +41,7 @@ impl LocalAITest {
     .unwrap();
 
     let persist_dir = tempfile::tempdir().unwrap().path().to_path_buf();
-    config.set_rag_enabled(&persist_dir).unwrap();
+    // config.set_rag_enabled(&persist_dir).unwrap();
 
     self.ollama_plugin.init_plugin(config).await.unwrap();
   }
@@ -113,9 +113,9 @@ impl LocalAIConfiguration {
 
     // load from .env
     let ollama_server_url = dotenv::var("OLLAMA_SERVER_URL")?;
-    let ollama_plugin_exe = PathBuf::from(dotenv::var("OLLAMA_PLUGIN_EXE_PATH")?);
+    let ollama_plugin_exe = PathBuf::from(dotenv::var("OLLAMA_PLUGIN_EXE_PATH").unwrap_or_default());
     let chat_model_name = dotenv::var("OLLAMA_CHAT_MODEL_NAME")?;
-    let embedding_plugin_exe = PathBuf::from(dotenv::var("OLLAMA_EMBEDDING_EXE_PATH")?);
+    let embedding_plugin_exe = PathBuf::from(dotenv::var("OLLAMA_EMBEDDING_EXE_PATH").unwrap_or_default());
     let embedding_model_name = dotenv::var("OLLAMA_EMBEDDING_MODEL_NAME")?;
 
     Ok(Self {

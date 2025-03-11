@@ -19,6 +19,9 @@ parking_lot.workspace = true
 tokio-stream = { workspace = true, features = ["sync"] }
 cfg-if = "1.0.0"
 
+[target.'cfg(target_os = "windows")'.dependencies]
+winreg = "0.55"
+
 [target.'cfg(unix)'.dependencies]
 xattr = "1.3.1"
 
