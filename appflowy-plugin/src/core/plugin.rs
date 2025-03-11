@@ -239,7 +239,7 @@ pub(crate) async fn start_plugin_process(
         );
         #[cfg(windows)]
         {
-          match get_exec_command_path(&plugin_info.exec_command) {
+          match get_exec_command_path(format!("{}.exe", &plugin_info.exec_command).as_str()) {
             Some(path) => {
               info!("Found plugin executable: {:?}", path);
               Command::new(&path)

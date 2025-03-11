@@ -41,7 +41,7 @@ impl LocalAITest {
     .unwrap();
 
     let persist_dir = tempfile::tempdir().unwrap().path().to_path_buf();
-    // config.set_rag_enabled(&persist_dir).unwrap();
+    config.set_rag_enabled(&persist_dir).unwrap();
 
     self.ollama_plugin.init_plugin(config).await.unwrap();
   }
