@@ -122,7 +122,7 @@ impl AIPluginOperation {
 
     let mut metadata = metadata.unwrap_or_default();
     metadata.insert("chat_id".to_string(), json!(chat_id));
-    let mut params = json!({ "metadata": [metadata] });
+    let mut params = json!({ "metadatas": [metadata] });
 
     if let Some(file_path) = file_path {
       params["file_path"] = json!(file_path);

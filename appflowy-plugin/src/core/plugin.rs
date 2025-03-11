@@ -223,11 +223,35 @@ pub(crate) async fn start_plugin_process(
       info!("Load {} plugin", &plugin_info.name);
       let mut command = if fs::metadata(&plugin_info.exec_path).is_ok() {
         // If exec_path exists, use it to start the process
-        info!("[AI Plugin]: run plugin with exec_path: {:?}", &plugin_info.exec_path);
+        info!(
+          "[AI Plugin]: run plugin with exec_path: {:?}",
+          &plugin_info.exec_path
+        );
         Command::new(&plugin_info.exec_path)
       } else {
         // Otherwise, use exec_command
-        info!("[AI Plugin]: run plugin with command: {:?}", &plugin_info.exec_command);
+        info!(
+          "[AI Plugin]: run plugin with command: {:?}",
+          &plugin_info.exec_command
+        );
+        #[cfg(windows)]
+        {
+          match get_exec_command_path(&plugin_info.exec_command) {
+            Some(path) => {
+              info!("Found plugin executable: {:?}", path);
+              Command::new(&path)
+            },
+            None => {
+              error!(
+                "Plugin executable not found: {:?}",
+                &plugin_info.exec_command
+              );
+              Command::new(&plugin_info.exec_command)
+            },
+          }
+        }
+
+        #[cfg(not(windows))]
         Command::new(&plugin_info.exec_command)
       };
 
@@ -340,4 +364,37 @@ pub fn handle_macos_security_check(plugin_info: &PluginInfo) {
       error!("Failed to open plugin file: {:?}", err);
     }
   }
+}
+
+#[cfg(windows)]
+fn get_exec_command_path(exec_command: &str) -> Option<PathBuf> {
+  let path_dirs = get_windows_path_dirs();
+  let plugin_exe = "ollama_ai_plugin.exe"; // Adjust name if needed
+  path_dirs
+    .iter()
+    .map(|dir| std::path::Path::new(dir).join(plugin_exe))
+    .find(|path| path.exists())
+}
+
+#[cfg(windows)]
+fn get_windows_path_dirs() -> Vec<String> {
+  let mut paths = Vec::new();
+
+  // Check HKEY_CURRENT_USER\Environment
+  let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+  if let Ok(env) = hkcu.open_subkey("Environment") {
+    if let Ok(path) = env.get_value::<String, _>("Path") {
+      paths.extend(path.split(';').map(|s| s.trim().to_string()));
+    }
+  }
+
+  // Check HKEY_LOCAL_MACHINE\SYSTEM\...\Environment
+  let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+  if let Ok(env) = hklm.open_subkey(r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment")
+  {
+    if let Ok(path) = env.get_value::<String, _>("Path") {
+      paths.extend(path.split(';').map(|s| s.trim().to_string()));
+    }
+  }
+  paths
 }

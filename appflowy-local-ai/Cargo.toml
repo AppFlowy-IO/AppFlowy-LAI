@@ -23,6 +23,8 @@ futures = "0.3.31"
 [features]
 verbose = ["appflowy-plugin/verbose"]
 
+[target.'cfg(target_os = "windows")'.dependencies]
+winreg = "0.55"
 
 [dev-dependencies]
 dotenv = "0.15.0"
