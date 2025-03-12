@@ -10,7 +10,7 @@ on:
 
 jobs:
   run_test:
-    runs-on: self-hosted
+    runs-on: macOS
 
     steps:
       - name: Checkout code
@@ -25,9 +25,8 @@ jobs:
 
       - name: Download artifact from S3
         run: |
-          aws s3 cp s3://appflowy-local-ai-test/macos-latest/AppFlowyAI_debug.zip AppFlowyAI_macos-latest_debug.zip
-          unzip AppFlowyAI_macos-latest_debug.zip -d AppFlowyAI
-          cd AppFlowyAI
+          aws s3 cp  s3://${{ secrets.TEST_LOCAL_AI_BUCKET_NAME }}/macos-latest/ollama_ai_plugin.zip ollama_ai_plugin.zip
+          unzip ollama_ai_plugin.zip -d ollama_ai_plugin
           ls
         shell: bash
 
@@ -35,19 +34,12 @@ jobs:
         run: |
           ls
           ABS_PATH=$(pwd)
-          OLLAMA_PLUGIN_EXE_PATH=$ABS_PATH/AppFlowyAI/AppFlowyAI.app/Contents/MacOS/appflowy_ai_plugin
-          OLLAMA_EMBEDDING_EXE_PATH=$ABS_PATH/AppFlowyAI/AppFlowyAI.app/Contents/MacOS/appflowy_embedding_plugin
+          OLLAMA_PLUGIN_EXE_PATH=$ABS_PATH/ollama_ai_plugin
           
           cp dev.env .env
           sed -i '' 's|RUST_LOG=.*|RUST_LOG=trace|' .env
           
-          # binary
           sed -i '' "s|OLLAMA_PLUGIN_EXE_PATH=.*|OLLAMA_PLUGIN_EXE_PATH=$OLLAMA_PLUGIN_EXE_PATH|" .env
-          sed -i '' "s|OLLAMA_EMBEDDING_EXE_PATH=.*|OLLAMA_EMBEDDING_EXE_PATH=$OLLAMA_EMBEDDING_EXE_PATH|" .env
-          # model
-          sed -i '' "s|OLLAMA_SERVER_URL=.*|OLLAMA_SERVER_URL=/Users/weidongfu/Documents/LLMModel|" .env
-          sed -i '' 's|OLLAMA_CHAT_MODEL_NAME=.*|OLLAMA_CHAT_MODEL_NAME=Mistral-7B-Instruct-v0.3.Q4_K_M.gguf|' .env
-          sed -i '' 's|OLLAMA_EMBEDDING_MODEL_NAME=.*|OLLAMA_EMBEDDING_MODEL_NAME=all-MiniLM-L12-v2.Q4_0.gguf|' .env
           cat .env
         shell: bash
 
@@ -58,5 +50,5 @@ jobs:
 
       - name: Cleanup downloaded artifacts
         run: |
-          rm -rf AppFlowyAI_macos-latest_debug.zip
-          rm -rf AppFlowyAI
+          rm -rf ollama_ai_plugin.zip
+          rm -rf ollama_ai_plugin
