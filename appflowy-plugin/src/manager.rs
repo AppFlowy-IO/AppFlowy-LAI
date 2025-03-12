@@ -53,21 +53,14 @@ impl PluginManager {
       )));
     }
 
-    if self
-      .running_plugins
-      .read()
-      .await
-      .contains_key(&plugin_info.name)
-    {
+    let mut write_guard = self.running_plugins.write().await;
+    if write_guard.contains_key(&plugin_info.name) {
       return Err(PluginError::Internal(anyhow!("plugin already running")));
     }
 
     let plugin_id = PluginId::from(self.plugin_id_counter.fetch_add(1, Ordering::SeqCst));
-    self
-      .running_plugins
-      .write()
-      .await
-      .insert(plugin_info.name.clone(), plugin_id);
+    write_guard.insert(plugin_info.name.clone(), plugin_id);
+    drop(write_guard);
 
     let weak_state = WeakPluginState(Arc::downgrade(&self.state));
     start_plugin_process(plugin_info, plugin_id, weak_state, running_state).await?;

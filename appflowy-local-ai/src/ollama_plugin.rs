@@ -250,6 +250,7 @@ impl OllamaAIPlugin {
           .plugin_manager
           .create_plugin(plugin_info, self.running_state.clone())
           .await?;
+        *self.plugin_id.lock().await = Some(plugin_id);
 
         // Set up plugin parameters.
         let mut params = json!({});
@@ -268,7 +269,6 @@ impl OllamaAIPlugin {
           "[AI Plugin] Setting up chat plugin: {:?}, params: {:?}",
           plugin_id, params
         );
-        self.plugin_id.lock().await.replace(plugin_id);
         let plugin = self.plugin_manager.init_plugin(plugin_id, params).await?;
         info!("[AI Plugin] {} setup success", plugin);
         self.plugin_config.write().await.replace(config);
@@ -337,7 +337,7 @@ impl OllamaAIPlugin {
     let timeout_duration = Duration::from_secs(30);
     let result = timeout(timeout_duration, async {
       while let Some(state) = rx.next().await {
-        if state.is_ready() {
+        if state.is_running() {
           break;
         }
       }

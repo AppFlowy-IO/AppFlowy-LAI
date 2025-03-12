@@ -131,7 +131,7 @@ impl EmbeddingPlugin {
     let timeout_duration = Duration::from_secs(30);
     let result = timeout(timeout_duration, async {
       while let Some(state) = rx.next().await {
-        if state.is_ready() {
+        if state.is_running() {
           break;
         }
       }
