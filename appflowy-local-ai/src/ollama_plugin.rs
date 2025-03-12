@@ -127,7 +127,7 @@ impl OllamaAIPlugin {
     Ok(values)
   }
 
-  pub async fn index_file(
+  pub async fn embed_file(
     &self,
     chat_id: &str,
     file_path: Option<PathBuf>,
@@ -159,7 +159,7 @@ impl OllamaAIPlugin {
     let operation = AIPluginOperation::new(plugin);
 
     operation
-      .index_file(chat_id, file_path_str, file_content, metadata)
+      .embed_file(chat_id, file_path_str, file_content, metadata)
       .await?;
     Ok(())
   }
@@ -301,7 +301,7 @@ impl OllamaAIPlugin {
     self.wait_until_plugin_ready().await?;
     let plugin = self.get_ai_plugin().await?;
     let operation = EmbeddingPluginOperation::new(plugin);
-    operation.index_document(text, metadata).await?;
+    operation.embed_text(text, metadata).await?;
     Ok(())
   }
 

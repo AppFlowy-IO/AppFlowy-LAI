@@ -93,7 +93,7 @@ impl EmbeddingPlugin {
     self.wait_plugin_ready().await?;
     let plugin = self.get_embedding_plugin().await?;
     let operation = EmbeddingPluginOperation::new(plugin);
-    operation.index_document(text, metadata).await?;
+    operation.embed_text(text, metadata).await?;
     Ok(())
   }
 

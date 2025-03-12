@@ -107,7 +107,7 @@ impl AIPluginOperation {
   }
 
   #[instrument(level = "debug", skip_all, err)]
-  pub async fn index_file(
+  pub async fn embed_file(
     &self,
     chat_id: &str,
     file_path: Option<String>,
@@ -135,7 +135,7 @@ impl AIPluginOperation {
     trace!("[AI Plugin] indexing file: {:?}", params);
     self
       .send_request::<DefaultResponseParser>(
-        "index_file",
+        "embed_file",
         json!({ "chat_id": chat_id, "params": params }),
       )
       .await
