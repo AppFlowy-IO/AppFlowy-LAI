@@ -1,18 +1,22 @@
 # AppFlowy LAI
 
+This repo is used to load AI plugins in the AppFlowy Desktop application. Each plugin is an executable binary image
+available for download from the [releases page](https://github.com/AppFlowy-IO/AppFlowy-LAI/releases).
+
 ## Introduction
 
-AppFlowy LAI (Language AI Interface) is a flexible plugin system designed to support loading and running AI plugins written in different programming languages. It serves as a bridge between AppFlowy Desktop application and various AI services.
+AppFlowy LAI (Local AI) is a flexible plugin system designed to seamlessly integrate AI functionalities into the
+AppFlowy Desktop application. It supports plugins developed in various programming languages, serving as a bridge
+between AppFlowy Desktop and diverse AI services.
 
 ## Key Features
 
-- **Modular Plugin Architecture**: Load plugins written in different programming languages
-- **Seamless Integration**: Used as a Rust crate within AppFlowy Desktop
-- **Extensible Design**: Easily add support for new AI providers
-- **Cross-Language Support**: Connect AI capabilities regardless of implementation language
+- **Modular Plugin Architecture:** Load and manage plugins written in different programming languages.
+- **Seamless Integration:** Implemented as a Rust crate within the AppFlowy Desktop application.
+- **Extensible Design:** Easily extendable to support additional AI providers.
+- **Cross-Language Compatibility:** Enable AI functionality regardless of the implementation language.
 
 ## Current Plugins
 
-- **Ollama AI Plugin**: Communicates with Ollama server to provide AI capabilities
+- **Ollama AI Plugin:** Integrates AppFlowy Desktop with an Ollama server, enabling robust AI capabilities.
 
-## Getting Started
