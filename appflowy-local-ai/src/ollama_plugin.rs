@@ -185,9 +185,9 @@ impl OllamaAIPlugin {
   #[instrument(skip_all, err)]
   pub async fn destroy_plugin(&self) -> Result<()> {
     let plugin_id = self.plugin_id.lock().await.take();
-    info!("[AI Plugin]: destroy plugin: {:?}", plugin_id);
-
     if let Some(plugin_id) = plugin_id {
+      info!("[AI Plugin]: destroy plugin: {:?}", plugin_id);
+
       if let Err(err) = self.plugin_manager.remove_plugin(plugin_id).await {
         error!("remove plugin failed: {:?}", err);
       }

@@ -197,3 +197,10 @@ async fn ci_database_row_test() {
   let score = test.calculate_similarity(&resp_str, expected).await;
   assert!(score > 0.8, "score: {}, actural: {}", score, resp_str);
 }
+
+#[tokio::test]
+async fn destroy_plugin_test() {
+  let test = LocalAITest::new().unwrap();
+
+  test.init_chat_plugin().await;
+}
