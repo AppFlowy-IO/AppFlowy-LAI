@@ -237,9 +237,6 @@ impl OllamaAIPlugin {
     match self.init_lock.try_lock() {
       Ok(_guard) => {
         // We have the lock and can proceed with initialization.
-        if let Err(err) = self.destroy_plugin().await {
-          error!("[AI Plugin] Failed to destroy plugin: {:?}", err);
-        }
         trace!("[AI Plugin] Creating chat plugin with config: {:?}", config);
         let plugin_info = PluginInfo {
           name: "ollama_ai_plugin".to_string(),
@@ -250,6 +247,10 @@ impl OllamaAIPlugin {
           .plugin_manager
           .create_plugin(plugin_info, self.running_state.clone())
           .await?;
+
+        if let Err(err) = self.destroy_plugin().await {
+          error!("[AI Plugin] Failed to destroy plugin: {:?}", err);
+        }
         *self.plugin_id.lock().await = Some(plugin_id);
 
         // Set up plugin parameters.
