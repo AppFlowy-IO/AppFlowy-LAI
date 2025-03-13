@@ -264,9 +264,14 @@ pub(crate) async fn start_plugin_process(
         #[cfg(not(windows))]
         Command::new(&plugin_info.exec_command)
       };
+      #[cfg(windows)]
+      {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        command.creation_flags(CREATE_NO_WINDOW);
+      }
 
       let child = command.stdin(Stdio::piped()).stdout(Stdio::piped()).spawn();
-
       match child {
         Ok(mut child) => {
           let child_stdin = child.stdin.take().unwrap();
