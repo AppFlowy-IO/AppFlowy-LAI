@@ -107,6 +107,7 @@ impl OllamaAIPlugin {
     &self,
     chat_id: &str,
     message: &str,
+    format: Option<serde_json::Value>,
     metadata: serde_json::Value,
   ) -> Result<ReceiverStream<anyhow::Result<Value, PluginError>>, PluginError> {
     trace!("[AI Plugin] ask question: {}", message);
@@ -114,7 +115,7 @@ impl OllamaAIPlugin {
     let plugin = self.get_ai_plugin().await?;
     let operation = AIPluginOperation::new(plugin);
     let stream = operation
-      .stream_message_v2(chat_id, message, metadata)
+      .stream_message_v2(chat_id, message, format, metadata)
       .await?;
     Ok(stream)
   }

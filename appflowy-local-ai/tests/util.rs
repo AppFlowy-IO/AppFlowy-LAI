@@ -58,10 +58,11 @@ impl LocalAITest {
     &self,
     chat_id: &str,
     message: &str,
+    format: Option<serde_json::Value>,
   ) -> ReceiverStream<Result<Value, PluginError>> {
     self
       .ollama_plugin
-      .stream_question(chat_id, message, json!({}))
+      .stream_question(chat_id, message, format, json!({}))
       .await
       .unwrap()
   }

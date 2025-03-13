@@ -43,7 +43,9 @@ async fn ci_chat_stream_test() {
   });
 
   let chat_id = uuid::Uuid::new_v4().to_string();
-  let resp = test.stream_chat_message(&chat_id, "what is banana?").await;
+  let resp = test
+    .stream_chat_message(&chat_id, "what is banana?", None)
+    .await;
   let answer = collect_bytes_stream(resp).await;
   println!("stream response: {:?}", answer);
 
@@ -111,7 +113,7 @@ async fn ci_chat_with_pdf() {
 
   let resp = test
     .ollama_plugin
-    .stream_question(&chat_id, "what is AppFlowy Values?", json!({}))
+    .stream_question(&chat_id, "what is AppFlowy Values?", None, json!({}))
     .await
     .unwrap();
   let answer = collect_bytes_stream(resp).await;

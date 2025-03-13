@@ -87,12 +87,13 @@ impl AIPluginOperation {
     &self,
     chat_id: &str,
     message: &str,
+    format: Option<serde_json::Value>,
     metadata: serde_json::Value,
   ) -> Result<ReceiverStream<Result<serde_json::Value, PluginError>>, PluginError> {
     let plugin = self.get_plugin()?;
     let params = json!({
         "method": "stream_answer_v2",
-        "params": {"chat_id": chat_id, "data": {"content": message}, "metadata": metadata}
+        "params": {"chat_id": chat_id, "data": {"content": message}, "metadata": metadata, "format": format}
     });
     plugin.stream_request::<ChatStreamResponseV2Parser>("handle", &params)
   }
