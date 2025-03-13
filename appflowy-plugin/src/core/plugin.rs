@@ -22,7 +22,7 @@ use tokio_stream::wrappers::{ReceiverStream, WatchStream};
 #[cfg(windows)]
 use winreg::{enums::*, RegKey};
 
-use tracing::{error, info, trace};
+use tracing::{error, info, trace, warn};
 
 #[derive(
   Default, Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize,
@@ -201,7 +201,7 @@ impl Plugin {
         info!("shutting down plugin {}", self);
       },
       Err(err) => {
-        error!("error sending shutdown to plugin {}: {:?}", self, err);
+        warn!("error sending shutdown to plugin {}: {:?}", self, err);
       },
     }
   }
