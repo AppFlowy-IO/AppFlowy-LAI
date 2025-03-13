@@ -55,7 +55,7 @@ impl PluginManager {
 
     let mut write_guard = self.running_plugins.write().await;
     if write_guard.contains_key(&plugin_info.name) {
-      return Err(PluginError::Internal(anyhow!("plugin already running")));
+      return Err(PluginError::InProgress);
     }
 
     let plugin_id = PluginId::from(self.plugin_id_counter.fetch_add(1, Ordering::SeqCst));

@@ -21,6 +21,9 @@ pub enum PluginError {
   #[error("Plugin not connected.")]
   PluginNotConnected,
 
+  #[error("Plugin is initializing.")]
+  InProgress,
+
   #[error(transparent)]
   Internal(#[from] anyhow::Error),
 }

@@ -247,7 +247,7 @@ impl OllamaAIPlugin {
     Ok(resp)
   }
 
-  pub async fn init_plugin(&self, config: OllamaPluginConfig) -> Result<()> {
+  pub async fn init_plugin(&self, config: OllamaPluginConfig) -> Result<(), PluginError> {
     // Try to acquire the initialization lock without waiting.
     match self.init_lock.try_lock() {
       Ok(_guard) => {
