@@ -212,6 +212,17 @@ impl OllamaAIPlugin {
     Ok(stream)
   }
 
+  pub async fn complete_text_2(
+    &self,
+    content: serde_json::Value,
+  ) -> Result<ReceiverStream<anyhow::Result<Bytes, PluginError>>, PluginError> {
+    self.wait_until_plugin_ready().await?;
+    let plugin = self.get_ai_plugin().await?;
+    let operation = AIPluginOperation::new(plugin);
+    let stream = operation.complete_text_v2(content).await?;
+    Ok(stream)
+  }
+
   pub async fn summary_database_row(
     &self,
     row: HashMap<String, String>,

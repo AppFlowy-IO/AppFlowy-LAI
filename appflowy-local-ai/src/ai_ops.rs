@@ -159,6 +159,19 @@ impl AIPluginOperation {
   }
 
   #[instrument(level = "debug", skip(self), err)]
+  pub async fn complete_text_v2(
+    &self,
+    content: serde_json::Value,
+  ) -> Result<ReceiverStream<Result<Bytes, PluginError>>, PluginError> {
+    let plugin = self.get_plugin()?;
+    let params = json!({
+        "method": "complete_text",
+        "params": content
+    });
+    plugin.stream_request::<ChatStreamResponseParser>("handle", &params)
+  }
+
+  #[instrument(level = "debug", skip(self), err)]
   pub async fn summary_row(&self, row: HashMap<String, String>) -> Result<String, PluginError> {
     let params = json!({"params": row });
     self
