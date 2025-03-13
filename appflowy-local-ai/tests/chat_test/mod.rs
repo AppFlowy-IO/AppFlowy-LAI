@@ -83,7 +83,11 @@ async fn ci_completion_text_test() {
 
   let mut resp = test
     .ollama_plugin
-    .complete_text("tell me the book, atomic habits", CompleteTextType::AskAI)
+    .complete_text(
+      "tell me the book, atomic habits",
+      CompleteTextType::AskAI,
+      None,
+    )
     .await
     .unwrap();
   let mut list = vec![];

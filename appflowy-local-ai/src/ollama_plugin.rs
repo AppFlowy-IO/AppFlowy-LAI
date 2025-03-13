@@ -200,12 +200,15 @@ impl OllamaAIPlugin {
     &self,
     message: &str,
     complete_type: T,
+    format: Option<serde_json::Value>,
   ) -> Result<ReceiverStream<anyhow::Result<Bytes, PluginError>>, PluginError> {
     trace!("[AI Plugin]  complete text: {}", message);
     self.wait_until_plugin_ready().await?;
     let plugin = self.get_ai_plugin().await?;
     let operation = AIPluginOperation::new(plugin);
-    let stream = operation.complete_text(message, complete_type).await?;
+    let stream = operation
+      .complete_text(message, complete_type, format)
+      .await?;
     Ok(stream)
   }
 

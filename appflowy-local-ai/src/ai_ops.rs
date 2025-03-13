@@ -147,12 +147,13 @@ impl AIPluginOperation {
     &self,
     message: &str,
     complete_type: T,
+    format: Option<serde_json::Value>,
   ) -> Result<ReceiverStream<Result<Bytes, PluginError>>, PluginError> {
     let plugin = self.get_plugin()?;
     let complete_type = complete_type.into() as u8;
     let params = json!({
         "method": "complete_text",
-        "params": { "text": message, "type": complete_type }
+        "params": { "text": message, "type": complete_type, "format": format }
     });
     plugin.stream_request::<ChatStreamResponseParser>("handle", &params)
   }
