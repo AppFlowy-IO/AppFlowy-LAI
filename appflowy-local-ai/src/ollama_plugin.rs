@@ -397,6 +397,7 @@ pub struct OllamaPluginConfig {
   pub server_url: String,
   pub persist_directory: Option<PathBuf>,
   pub verbose: bool,
+  pub log_level: String,
 }
 
 impl OllamaPluginConfig {
@@ -415,10 +416,16 @@ impl OllamaPluginConfig {
       persist_directory: None,
       server_url: server_url.unwrap_or("http://localhost:11434".to_string()),
       verbose: false,
+      log_level: "info".to_string(),
     })
   }
   pub fn with_verbose(mut self, verbose: bool) -> Self {
     self.verbose = verbose;
+    self
+  }
+
+  pub fn with_log_level(mut self, log_level: String) -> Self {
+    self.log_level = log_level;
     self
   }
   pub fn set_rag_enabled(&mut self, persist_directory: &PathBuf) -> Result<()> {
