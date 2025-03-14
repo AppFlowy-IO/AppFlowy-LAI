@@ -91,10 +91,21 @@ impl AIPluginOperation {
     metadata: serde_json::Value,
   ) -> Result<ReceiverStream<Result<serde_json::Value, PluginError>>, PluginError> {
     let plugin = self.get_plugin()?;
+
+    // Build the inner params as a map.
+    let mut inner_params = serde_json::Map::new();
+    inner_params.insert("chat_id".to_string(), json!(chat_id));
+    inner_params.insert("data".to_string(), json!({ "content": message }));
+    inner_params.insert("metadata".to_string(), metadata);
+    if let Some(fmt) = format {
+      inner_params.insert("format".to_string(), fmt);
+    }
+
     let params = json!({
         "method": "stream_answer_v2",
-        "params": {"chat_id": chat_id, "data": {"content": message}, "metadata": metadata, "format": format}
+        "params": serde_json::Value::Object(inner_params)
     });
+
     plugin.stream_request::<ChatStreamResponseV2Parser>("handle", &params)
   }
 
@@ -151,10 +162,19 @@ impl AIPluginOperation {
   ) -> Result<ReceiverStream<Result<Bytes, PluginError>>, PluginError> {
     let plugin = self.get_plugin()?;
     let complete_type = complete_type.into() as u8;
+
+    let mut inner_params = serde_json::Map::new();
+    inner_params.insert("text".to_string(), json!(message));
+    inner_params.insert("type".to_string(), json!(complete_type));
+    if let Some(fmt) = format {
+      inner_params.insert("format".to_string(), fmt);
+    }
+
     let params = json!({
         "method": "complete_text",
-        "params": { "text": message, "type": complete_type, "format": format }
+        "params": serde_json::Value::Object(inner_params)
     });
+
     plugin.stream_request::<ChatStreamResponseParser>("handle", &params)
   }
 
