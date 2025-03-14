@@ -165,7 +165,7 @@ impl<W: Write + Send> RpcLoop<W> {
         let mut stream = buffer_read_fn();
         loop {
           if self.peer.needs_exit() {
-            trace!("read loop exit");
+            trace!("[RPC] exit peer loop");
             break;
           }
           let json = match self.reader.next(&mut stream) {
@@ -186,7 +186,7 @@ impl<W: Write + Send> RpcLoop<W> {
               if json.is_shutdown() {
                 debug!("[RPC] received remote process shutdown signal");
                 self.peer.put_rpc_object(Ok(json));
-                break;
+                continue;
               }
 
               if json.is_response() {
@@ -231,7 +231,6 @@ impl<W: Write + Send> RpcLoop<W> {
         };
 
         if json.is_shutdown() {
-          debug!("[RPC] shutdown");
           peer.shutdown(plugin_id);
           return ReadError::Io(io::Error::new(io::ErrorKind::Interrupted, "shutdown"));
         }

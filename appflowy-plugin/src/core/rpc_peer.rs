@@ -13,7 +13,7 @@ use std::sync::{mpsc, Arc};
 use std::time::{Duration, Instant};
 use std::{cmp, io};
 use tokio_stream::Stream;
-use tracing::{error, trace, warn};
+use tracing::{error, info, trace, warn};
 
 pub struct PluginCommand<T> {
   pub plugin_id: PluginId,
@@ -199,9 +199,9 @@ impl<W: Write> RawPeer<W> {
     trace!("[RPC] call method: {} params: {:?}", method, params);
     let id = self.0.request_id_counter.fetch_add(1, Ordering::Relaxed);
     {
-      let mut pending = self.0.pending.lock();
-      pending.insert(id, response_handler);
-      drop(pending);
+      if let Some(mut pending) = self.0.pending.try_lock() {
+        pending.insert(id, response_handler);
+      }
     }
 
     // Call the ResponseHandler if the send fails. Otherwise, the response will be
@@ -211,12 +211,13 @@ impl<W: Write> RawPeer<W> {
         "method": method,
         "params": params,
     })) {
-      let mut pending = self.0.pending.lock();
-      let handler = pending.remove(&id);
-      drop(pending);
+      if let Some(mut pending) = self.0.pending.try_lock() {
+        let handler = pending.remove(&id);
+        drop(pending);
 
-      if let Some(rh) = handler {
-        rh.invoke(Err(PluginError::Io(e)));
+        if let Some(rh) = handler {
+          rh.invoke(Err(PluginError::Io(e)));
+        }
       }
     }
   }
@@ -348,6 +349,7 @@ impl<W: Write> RawPeer<W> {
   }
 
   pub(crate) fn shutdown(&self, plugin_id: &PluginId) {
+    info!("[RPC] shutdown");
     self.handle_disconnect(RunningState::Stopped {
       plugin_id: *plugin_id,
     });
@@ -373,6 +375,7 @@ impl<W: Write> RawPeer<W> {
     }
     drop(pending);
 
+    trace!("[RPC] marking needs_exit");
     self.0.needs_exit.store(true, Ordering::Relaxed);
   }
 
