@@ -80,7 +80,7 @@ impl EmbeddingPlugin {
     self.wait_plugin_ready().await?;
     let plugin = self.get_embedding_plugin().await?;
     let operation = EmbeddingPluginOperation::new(plugin);
-    let embeddings = operation.embed_documents(text).await?;
+    let embeddings = operation.gen_embeddings(text).await?;
     Ok(embeddings)
   }
 

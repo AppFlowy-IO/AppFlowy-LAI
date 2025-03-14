@@ -159,13 +159,22 @@ pub fn get_asset_path(name: &str) -> PathBuf {
 pub async fn collect_bytes_stream(
   mut stream: ReceiverStream<Result<Value, PluginError>>,
 ) -> String {
-  let mut list = vec![];
-  while let Some(s) = stream.next().await {
-    if let Value::Object(mut map) = s.unwrap() {
-      let s = map.remove("1").unwrap().as_str().unwrap().to_string();
-      list.push(s);
-    }
+  let mut list = Vec::new();
+  while let Some(item) = stream.next().await {
+    // Try to extract the string from the JSON object.
+    // On any error or if the structure is not as expected, use an empty string.
+    let s = item
+        .ok() // Converts Result<Value, PluginError> to Option<Value>, discarding any error.
+        .and_then(|value| {
+          if let Value::Object(mut map) = value {
+            map.remove("1")
+                .and_then(|v| v.as_str().map(String::from))
+          } else {
+            None
+          }
+        })
+        .unwrap_or_default();
+    list.push(s);
   }
-
   list.join("")
 }

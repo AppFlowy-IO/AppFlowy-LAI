@@ -303,7 +303,7 @@ impl OllamaAIPlugin {
     self.wait_until_plugin_ready().await?;
     let plugin = self.get_ai_plugin().await?;
     let operation = EmbeddingPluginOperation::new(plugin);
-    let embeddings = operation.embed_documents(text).await?;
+    let embeddings = operation.gen_embeddings(text).await?;
     Ok(embeddings)
   }
 

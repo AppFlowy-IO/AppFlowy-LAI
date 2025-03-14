@@ -146,10 +146,7 @@ impl AIPluginOperation {
 
     trace!("[AI Plugin] indexing file: {:?}", params);
     self
-      .send_request::<DefaultResponseParser>(
-        "embed_file",
-        json!({ "chat_id": chat_id, "params": params }),
-      )
+      .send_request::<DefaultResponseParser>("embed_file", params)
       .await
   }
 

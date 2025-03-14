@@ -16,12 +16,12 @@ impl EmbeddingPluginOperation {
     EmbeddingPluginOperation { plugin }
   }
 
-  pub async fn embed_documents(&self, message: &str) -> Result<Vec<Vec<f64>>, PluginError> {
+  pub async fn gen_embeddings(&self, message: &str) -> Result<Vec<Vec<f64>>, PluginError> {
     let plugin = self
       .plugin
       .upgrade()
       .ok_or(PluginError::Internal(anyhow!("Plugin is dropped")))?;
-    let params = json!({"method": "embed_documents", "params": {"input": message }});
+    let params = json!({"method": "gen_embeddings", "params": {"input": message }});
     plugin
       .async_request::<EmbeddingResponseParse>("handle", &params)
       .await
