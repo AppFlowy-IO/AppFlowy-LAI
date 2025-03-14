@@ -178,22 +178,28 @@ impl<W: Write + Send> RpcLoop<W> {
             },
           };
           self.peer.notify_running(*plugin_id);
-          if json.is_response() {
-            let request_id = json.get_id().unwrap();
-            match json.into_response() {
-              Ok(resp) => {
-                let resp = resp.map_err(PluginError::from);
-                self.peer.handle_response(request_id, resp);
-              },
-              Err(msg) => {
-                error!("[RPC] failed to parse response: {}", msg);
-                self
-                  .peer
-                  .handle_response(request_id, Err(PluginError::InvalidResponse));
-              },
-            }
-          } else {
-            self.peer.put_rpc_object(Ok(json));
+
+          match json {
+            None => continue,
+            Some(json) => {
+              if json.is_response() {
+                let request_id = json.get_id().unwrap();
+                match json.into_response() {
+                  Ok(resp) => {
+                    let resp = resp.map_err(PluginError::from);
+                    self.peer.handle_response(request_id, resp);
+                  },
+                  Err(msg) => {
+                    error!("[RPC] failed to parse response: {}", msg);
+                    self
+                      .peer
+                      .handle_response(request_id, Err(PluginError::InvalidResponse));
+                  },
+                }
+              } else {
+                self.peer.put_rpc_object(Ok(json));
+              }
+            },
           }
         }
       });

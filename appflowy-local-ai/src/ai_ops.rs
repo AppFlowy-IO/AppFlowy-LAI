@@ -190,9 +190,8 @@ impl AIPluginOperation {
 
   #[instrument(level = "debug", skip(self), err)]
   pub async fn summary_row(&self, row: HashMap<String, String>) -> Result<String, PluginError> {
-    let params = json!({"params": row });
     self
-      .send_request::<DatabaseSummaryResponseParser>("database_summary", params)
+      .send_request::<DatabaseSummaryResponseParser>("database_summary", json!(row))
       .await
   }
 
@@ -201,9 +200,8 @@ impl AIPluginOperation {
     &self,
     data: LocalAITranslateRowData,
   ) -> Result<LocalAITranslateRowResponse, PluginError> {
-    let params = json!({"params": data });
     self
-      .send_request::<DatabaseTranslateResponseParser>("database_translate", params)
+      .send_request::<DatabaseTranslateResponseParser>("database_translate", json!(data))
       .await
   }
 }

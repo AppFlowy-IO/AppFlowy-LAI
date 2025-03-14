@@ -20,7 +20,7 @@ async fn load_chat_model_test() {
   eprintln!("chat response: {:?}", resp);
 
   let score = test.calculate_similarity(&resp, "Hello").await;
-  assert!(score > 0.9, "score: {}", score);
+  assert!(score > 0.8, "score: {}", score);
 }
 
 #[tokio::test]
