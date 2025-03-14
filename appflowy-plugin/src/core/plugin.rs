@@ -180,6 +180,7 @@ impl Plugin {
     method: &str,
     params: &JsonValue,
   ) -> Result<ReceiverStream<Result<P::ValueType, PluginError>>, PluginError> {
+    trace!("[AI plugin]: stream request: {:?}, {:?}", method, params);
     let (tx, stream) = tokio::sync::mpsc::channel(100);
     let stream = ReceiverStream::new(stream);
     let callback = CloneableCallback::new(move |result| match result {
