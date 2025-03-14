@@ -201,6 +201,7 @@ impl<W: Write> RawPeer<W> {
     {
       let mut pending = self.0.pending.lock();
       pending.insert(id, response_handler);
+      drop(pending);
     }
 
     // Call the ResponseHandler if the send fails. Otherwise, the response will be
@@ -211,7 +212,10 @@ impl<W: Write> RawPeer<W> {
         "params": params,
     })) {
       let mut pending = self.0.pending.lock();
-      if let Some(rh) = pending.remove(&id) {
+      let handler = pending.remove(&id);
+      drop(pending);
+
+      if let Some(rh) = handler {
         rh.invoke(Err(PluginError::Io(e)));
       }
     }
@@ -358,12 +362,17 @@ impl<W: Write> RawPeer<W> {
 
   fn handle_disconnect(&self, state: RunningState) {
     let _ = self.0.running_state.send(state);
-    let mut pending = self.0.pending.lock();
-    let ids = pending.keys().cloned().collect::<Vec<_>>();
-    for id in &ids {
-      let callback = pending.remove(id).unwrap();
-      callback.invoke(Err(PluginError::PeerDisconnect));
+    let mut pending = self.0.pending.try_lock();
+    if let Some(pending) = pending.as_mut() {
+      let ids = pending.keys().cloned().collect::<Vec<_>>();
+      for id in &ids {
+        if let Some(callback) = pending.remove(id) {
+          callback.invoke(Err(PluginError::PeerDisconnect));
+        }
+      }
     }
+    drop(pending);
+
     self.0.needs_exit.store(true, Ordering::Relaxed);
   }
 
