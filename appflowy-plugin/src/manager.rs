@@ -96,6 +96,8 @@ impl PluginManager {
     if let Some(name) = key_to_remove {
       running_plugins.remove(&name);
     }
+
+    info!("[AI Plugin]: did remove plugin {:?}", id);
     Ok(())
   }
 
