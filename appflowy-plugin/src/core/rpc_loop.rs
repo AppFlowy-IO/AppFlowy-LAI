@@ -9,7 +9,8 @@ use std::io::{BufRead, Write};
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
-use tracing::{error, trace};
+use tokio::io;
+use tracing::{debug, error, trace};
 
 const MAX_IDLE_WAIT: Duration = Duration::from_millis(5);
 
@@ -182,6 +183,12 @@ impl<W: Write + Send> RpcLoop<W> {
           match json {
             None => continue,
             Some(json) => {
+              if json.is_shutdown() {
+                debug!("[RPC] received remote process shutdown signal");
+                self.peer.put_rpc_object(Ok(json));
+                break;
+              }
+
               if json.is_response() {
                 let request_id = json.get_id().unwrap();
                 match json.into_response() {
@@ -222,6 +229,12 @@ impl<W: Write + Send> RpcLoop<W> {
             return err;
           },
         };
+
+        if json.is_shutdown() {
+          debug!("[RPC] shutdown");
+          peer.shutdown(plugin_id);
+          return ReadError::Io(io::Error::new(io::ErrorKind::Interrupted, "shutdown"));
+        }
 
         match json.into_rpc::<H::Request>() {
           Ok(Call::Request(id, cmd)) => {

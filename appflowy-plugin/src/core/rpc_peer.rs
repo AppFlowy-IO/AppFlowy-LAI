@@ -343,13 +343,21 @@ impl<W: Write> RawPeer<W> {
     Some(Ok(timers.pop().unwrap().token))
   }
 
-  /// send disconnect error to pending requests.
-  pub(crate) fn unexpected_disconnect<E: Debug>(&self, plugin_id: &PluginId, error: &E) {
-    trace!("[RPC] disconnecting peer with error {:?}", error);
-    let _ = self.0.running_state.send(RunningState::UnexpectedStop {
+  pub(crate) fn shutdown(&self, plugin_id: &PluginId) {
+    self.handle_disconnect(RunningState::Stopped {
       plugin_id: *plugin_id,
     });
+  }
 
+  pub(crate) fn unexpected_disconnect<E: Debug>(&self, plugin_id: &PluginId, error: &E) {
+    trace!("[RPC] disconnecting peer with error {:?}", error);
+    self.handle_disconnect(RunningState::UnexpectedStop {
+      plugin_id: *plugin_id,
+    });
+  }
+
+  fn handle_disconnect(&self, state: RunningState) {
+    let _ = self.0.running_state.send(state);
     let mut pending = self.0.pending.lock();
     let ids = pending.keys().cloned().collect::<Vec<_>>();
     for id in &ids {

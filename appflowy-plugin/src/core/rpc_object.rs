@@ -25,6 +25,14 @@ impl RpcObject {
     self.0.get("id").is_some() && self.0.get("method").is_none()
   }
 
+  pub fn is_shutdown(&self) -> bool {
+    self
+      .0
+      .get("shutdown")
+      .and_then(Value::as_bool)
+      .unwrap_or(false)
+  }
+
   /// Converts a JSON-RPC response into a structured `Response` object.
   ///
   /// This function validates and parses a JSON-RPC response, ensuring it contains the necessary fields,
