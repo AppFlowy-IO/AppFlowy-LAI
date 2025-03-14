@@ -17,15 +17,22 @@ impl MessageReader {
   /// This function will return an error if there is an underlying
   /// I/O error, if the stream is closed, or if the message is not
   /// a valid JSON object.
-  pub fn next<R: BufRead>(&mut self, reader: &mut R) -> Result<RpcObject, ReadError> {
+  pub fn next<R: BufRead>(&mut self, reader: &mut R) -> Result<Option<RpcObject>, ReadError> {
     self.0.clear();
-    let _ = reader.read_line(&mut self.0)?;
-    if self.0.is_empty() {
-      Err(ReadError::Disconnect(
-        "stdout return empty line".to_string(),
-      ))
-    } else {
-      self.parse(&self.0)
+    match reader.read_line(&mut self.0) {
+      Ok(_) => {
+        if self.0.is_empty() {
+          Err(ReadError::Disconnect(
+            "stdout return empty line".to_string(),
+          ))
+        } else {
+          self.parse(&self.0).map(Some)
+        }
+      },
+      Err(err) => {
+        tracing::trace!("[RPC] read line error: {:?}", err);
+        Ok(None)
+      },
     }
   }
 
@@ -39,7 +46,7 @@ impl MessageReader {
         if val.is_object() {
           Ok(val.into())
         } else {
-          error!("Expected JSON object, found: {}", s);
+          error!("[RPC] expected JSON object, found: {}", s);
           Ok(RpcObject(json!({"message": s.to_string()})))
         }
       },

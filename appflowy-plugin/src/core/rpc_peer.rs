@@ -345,7 +345,7 @@ impl<W: Write> RawPeer<W> {
 
   /// send disconnect error to pending requests.
   pub(crate) fn unexpected_disconnect<E: Debug>(&self, plugin_id: &PluginId, error: &E) {
-    trace!("[RPC] disconnecting peer: {:?}", error);
+    trace!("[RPC] disconnecting peer with error {:?}", error);
     let _ = self.0.running_state.send(RunningState::UnexpectedStop {
       plugin_id: *plugin_id,
     });

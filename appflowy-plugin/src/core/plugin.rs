@@ -303,7 +303,7 @@ pub(crate) async fn start_plugin_process(
           let err = looper.mainloop(
             &plugin_info.name,
             &plugin_id,
-            || BufReader::new(child_stdout),
+            || BufReader::with_capacity(4096, child_stdout),
             &mut state,
           );
           let _ = running_state.send(RunningState::Stopped { plugin_id });
@@ -324,6 +324,7 @@ pub(crate) async fn start_plugin_process(
   ret.await?;
   Ok(())
 }
+
 #[allow(dead_code)]
 #[cfg(unix)]
 async fn ensure_executable(exec_path: &std::path::Path) -> Result<(), anyhow::Error> {
