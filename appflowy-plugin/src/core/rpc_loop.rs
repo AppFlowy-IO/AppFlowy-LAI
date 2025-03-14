@@ -10,7 +10,7 @@ use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 use tokio::io;
-use tracing::{debug, error, info, trace};
+use tracing::{debug, error, trace};
 
 const MAX_IDLE_WAIT: Duration = Duration::from_millis(5);
 
