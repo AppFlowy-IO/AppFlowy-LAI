@@ -11,7 +11,7 @@ async fn ci_generate_embedding_test() {
   let mut metadata = HashMap::new();
   metadata.insert("id".to_string(), json!(id));
 
-  test.ollama_plugin.index("AppFlowy is an AI collaborative workspace where you achieve more without losing control of your data", metadata.clone()).await.unwrap();
+  test.ollama_plugin.embed_text("AppFlowy is an AI collaborative workspace where you achieve more without losing control of your data", metadata.clone()).await.unwrap();
   let resp = test
     .ollama_plugin
     .similarity_search("AppFlowy", metadata)

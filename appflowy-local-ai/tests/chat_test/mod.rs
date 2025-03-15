@@ -1,4 +1,4 @@
-use crate::util::{collect_bytes_stream, get_asset_path, LocalAITest};
+use crate::util::{collect_bytes_stream, collect_json_stream, get_asset_path, LocalAITest};
 
 use std::collections::HashMap;
 
@@ -46,7 +46,7 @@ async fn ci_chat_stream_test() {
   let resp = test
     .stream_chat_message(&chat_id, "what is banana?", None)
     .await;
-  let answer = collect_bytes_stream(resp).await;
+  let answer = collect_json_stream(resp).await;
   println!("stream response: {:?}", answer);
 
   let expected = r#"banana is a fruit that belongs to the genus _______, which also includes other fruits such as apple and pear. It has several varieties with different shapes, colors, and flavors depending on where it grows. Bananas are typically green or yellow in color and have smooth skin that peels off easily when ripe. They are sweet and juicy, often eaten raw or roasted, and can also be used for cooking and baking. In some cultures, banana is considered a symbol of good luck, fertility, and prosperity. Bananas originated in Southeast Asia, where they were cultivated by early humans thousands of years ago. They are now grown around the world as a major crop, with significant production in many countries including the United States, Brazil, India, and China#"#;
@@ -81,7 +81,7 @@ async fn ci_completion_text_test() {
     }
   });
 
-  let mut resp = test
+  let resp = test
     .ollama_plugin
     .complete_text(
       "tell me the book, atomic habits",
@@ -90,12 +90,7 @@ async fn ci_completion_text_test() {
     )
     .await
     .unwrap();
-  let mut list = vec![];
-  while let Some(s) = resp.next().await {
-    list.push(String::from_utf8(s.unwrap().to_vec()).unwrap());
-  }
-
-  let answer = list.join("");
+  let answer = collect_bytes_stream(resp).await;
   eprintln!("response: {:?}", answer);
 
   let expected = r#"The book you're referring to is "Atomic Habits" by James Clear. It offers practical strategies for forming good habits, breaking bad ones, and mastering the tiny behaviors that lead to remarkable results"#;
@@ -111,7 +106,7 @@ async fn ci_chat_with_pdf() {
   let pdf = get_asset_path("AppFlowy_Values.pdf");
   test
     .ollama_plugin
-    .embed_file(&chat_id, Some(pdf), None, None)
+    .embed_file(&chat_id, Some(pdf), None)
     .await
     .unwrap();
 
@@ -120,7 +115,7 @@ async fn ci_chat_with_pdf() {
     .stream_question(&chat_id, "what is AppFlowy Values?", None, json!({}))
     .await
     .unwrap();
-  let answer = collect_bytes_stream(resp).await;
+  let answer = collect_json_stream(resp).await;
   println!("chat with pdf response: {}", answer);
 
   let expected = r#"

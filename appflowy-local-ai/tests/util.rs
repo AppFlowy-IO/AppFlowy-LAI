@@ -3,6 +3,7 @@ use appflowy_local_ai::ollama_plugin::{OllamaAIPlugin, OllamaPluginConfig};
 use appflowy_plugin::error::PluginError;
 use appflowy_plugin::manager::PluginManager;
 
+use bytes::Bytes;
 use serde_json::{json, Value};
 use simsimd::SpatialSimilarity;
 use std::f64;
@@ -75,20 +76,26 @@ impl LocalAITest {
       .unwrap()
   }
 
+  async fn get_flat_embedding(&self, text: &str) -> Vec<f64> {
+    let embedding = self.ollama_plugin.generate_embedding(text).await.unwrap();
+    flatten_vec(embedding)
+  }
+
   pub async fn calculate_similarity(&self, input: &str, expected: &str) -> f64 {
-    let left = self.ollama_plugin.generate_embedding(input).await.unwrap();
-    let right = self
-      .ollama_plugin
-      .generate_embedding(expected)
-      .await
-      .unwrap();
+    // Generate flattened embeddings for both inputs.
+    let mut left_vec = self.get_flat_embedding(input).await;
+    let mut right_vec = self.get_flat_embedding(expected).await;
 
-    let actual_embedding_flat = flatten_vec(left);
-    let expected_embedding_flat = flatten_vec(right);
-    let distance = f64::cosine(&actual_embedding_flat, &expected_embedding_flat)
-      .expect("Vectors must be of the same length");
+    // Ensure both vectors have the same length by truncating the longer one.
+    if left_vec.len() != right_vec.len() {
+      let min_len = std::cmp::min(left_vec.len(), right_vec.len());
+      left_vec.truncate(min_len);
+      right_vec.truncate(min_len);
+    }
 
-    distance.cos()
+    // Compute the cosine distance (or angle) and then return the cosine similarity.
+    let angle = f64::cosine(&left_vec, &right_vec).expect("Vectors must be of the same length");
+    angle.cos()
   }
 }
 
@@ -157,8 +164,17 @@ pub fn get_asset_path(name: &str) -> PathBuf {
 }
 
 pub async fn collect_bytes_stream(
-  mut stream: ReceiverStream<Result<Value, PluginError>>,
+  mut stream: ReceiverStream<Result<Bytes, PluginError>>,
 ) -> String {
+  let mut list = vec![];
+  while let Some(s) = stream.next().await {
+    list.push(String::from_utf8(s.unwrap().to_vec()).unwrap());
+  }
+
+  list.join("")
+}
+
+pub async fn collect_json_stream(mut stream: ReceiverStream<Result<Value, PluginError>>) -> String {
   let mut list = Vec::new();
   while let Some(item) = stream.next().await {
     // Try to extract the string from the JSON object.

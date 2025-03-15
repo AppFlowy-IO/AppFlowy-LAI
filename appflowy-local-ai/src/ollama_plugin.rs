@@ -132,7 +132,6 @@ impl OllamaAIPlugin {
     &self,
     chat_id: &str,
     file_path: Option<PathBuf>,
-    file_content: Option<String>,
     metadata: Option<HashMap<String, serde_json::Value>>,
   ) -> Result<(), PluginError> {
     let mut file_path_str = None;
@@ -160,7 +159,7 @@ impl OllamaAIPlugin {
     let operation = AIPluginOperation::new(plugin);
 
     operation
-      .embed_file(chat_id, file_path_str, file_content, metadata)
+      .embed_file(chat_id, file_path_str, metadata)
       .await?;
     Ok(())
   }
@@ -312,7 +311,7 @@ impl OllamaAIPlugin {
     Ok(embeddings)
   }
 
-  pub async fn index(
+  pub async fn embed_text(
     &self,
     text: &str,
     metadata: HashMap<String, Value>,

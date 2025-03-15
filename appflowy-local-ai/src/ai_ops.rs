@@ -123,25 +123,20 @@ impl AIPluginOperation {
     &self,
     chat_id: &str,
     file_path: Option<String>,
-    file_content: Option<String>,
     metadata: Option<HashMap<String, serde_json::Value>>,
   ) -> Result<(), PluginError> {
-    if file_path.is_none() && file_content.is_none() {
+    if file_path.is_none() {
       return Err(PluginError::Internal(anyhow!(
-        "file_path or content must be provided"
+        "file_path  must be provided"
       )));
     }
 
     let mut metadata = metadata.unwrap_or_default();
     metadata.insert("chat_id".to_string(), json!(chat_id));
-    let mut params = json!({ "metadatas": [metadata] });
+    let mut params = json!({ "metadata": metadata });
 
     if let Some(file_path) = file_path {
       params["file_path"] = json!(file_path);
-    }
-
-    if let Some(content) = file_content {
-      params["file_content"] = json!(content);
     }
 
     trace!("[AI Plugin] indexing file: {:?}", params);
@@ -162,7 +157,7 @@ impl AIPluginOperation {
 
     let mut inner_params = serde_json::Map::new();
     inner_params.insert("text".to_string(), json!(message));
-    inner_params.insert("type".to_string(), json!(complete_type));
+    inner_params.insert("completion_type".to_string(), json!(complete_type));
     if let Some(fmt) = format {
       inner_params.insert("format".to_string(), fmt);
     }
