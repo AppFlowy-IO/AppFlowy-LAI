@@ -122,23 +122,12 @@ impl AIPluginOperation {
   pub async fn embed_file(
     &self,
     chat_id: &str,
-    file_path: Option<String>,
+    file_path: String,
     metadata: Option<HashMap<String, serde_json::Value>>,
   ) -> Result<(), PluginError> {
-    if file_path.is_none() {
-      return Err(PluginError::Internal(anyhow!(
-        "file_path  must be provided"
-      )));
-    }
-
     let mut metadata = metadata.unwrap_or_default();
     metadata.insert("chat_id".to_string(), json!(chat_id));
-    let mut params = json!({ "metadata": metadata });
-
-    if let Some(file_path) = file_path {
-      params["file_path"] = json!(file_path);
-    }
-
+    let params = json!({ "metadata": metadata, "file_path": json!(file_path) });
     trace!("[AI Plugin] indexing file: {:?}", params);
     self
       .send_request::<DefaultResponseParser>("embed_file", params)

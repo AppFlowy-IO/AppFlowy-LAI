@@ -131,33 +131,27 @@ impl OllamaAIPlugin {
   pub async fn embed_file(
     &self,
     chat_id: &str,
-    file_path: Option<PathBuf>,
+    file_path: PathBuf,
     metadata: Option<HashMap<String, serde_json::Value>>,
   ) -> Result<(), PluginError> {
-    let mut file_path_str = None;
-    if let Some(file_path) = file_path {
-      if !file_path.exists() {
-        return Err(PluginError::Io(io::Error::new(
-          io::ErrorKind::NotFound,
-          "file not found",
-        )));
-      }
-
-      file_path_str = Some(
-        file_path
-          .to_str()
-          .ok_or(PluginError::Io(io::Error::new(
-            io::ErrorKind::NotFound,
-            "file path invalid",
-          )))?
-          .to_string(),
-      );
+    if !file_path.exists() {
+      return Err(PluginError::Io(io::Error::new(
+        io::ErrorKind::NotFound,
+        "file not found",
+      )));
     }
+
+    let file_path_str = file_path
+      .to_str()
+      .ok_or(PluginError::Io(io::Error::new(
+        io::ErrorKind::NotFound,
+        "file path invalid",
+      )))?
+      .to_string();
 
     self.wait_until_plugin_ready().await?;
     let plugin = self.get_ai_plugin().await?;
     let operation = AIPluginOperation::new(plugin);
-
     operation
       .embed_file(chat_id, file_path_str, metadata)
       .await?;

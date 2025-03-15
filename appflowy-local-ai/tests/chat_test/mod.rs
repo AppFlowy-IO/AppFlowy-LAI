@@ -106,7 +106,7 @@ async fn ci_chat_with_pdf() {
   let pdf = get_asset_path("AppFlowy_Values.pdf");
   test
     .ollama_plugin
-    .embed_file(&chat_id, Some(pdf), None)
+    .embed_file(&chat_id, pdf, None)
     .await
     .unwrap();
 
