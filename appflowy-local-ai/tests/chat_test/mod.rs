@@ -1,4 +1,6 @@
-use crate::util::{collect_bytes_stream, collect_json_stream, get_asset_path, LocalAITest};
+use crate::util::{
+  collect_bytes_stream, collect_completion_stream, collect_json_stream, get_asset_path, LocalAITest,
+};
 
 use std::collections::HashMap;
 
@@ -95,6 +97,51 @@ async fn ci_completion_text_test() {
 
   let expected = r#"The book you're referring to is "Atomic Habits" by James Clear. It offers practical strategies for forming good habits, breaking bad ones, and mastering the tiny behaviors that lead to remarkable results"#;
   let score = test.calculate_similarity(&answer, expected).await;
+  assert!(score > 0.7, "score: {}", score);
+}
+
+#[tokio::test]
+async fn ci_completion_text_v2_test() {
+  let test = LocalAITest::new().unwrap();
+  test.init_chat_plugin().await;
+
+  let chat_plugin = test
+    .ollama_plugin
+    .get_ai_plugin()
+    .await
+    .unwrap()
+    .upgrade()
+    .unwrap();
+  let mut state_rx = chat_plugin.subscribe_running_state();
+  tokio::spawn(async move {
+    while let Some(state) = state_rx.next().await {
+      eprintln!("chat state: {:?}", state);
+    }
+  });
+
+  let resp = test
+    .ollama_plugin
+    .complete_text_v2(
+      "Me and him was going to the store, but we didn’t had enough money",
+      CompleteTextType::SpellingAndGrammar as u8,
+      None,
+      Some(json!({
+        "object_id": "123",
+      })),
+    )
+    .await
+    .unwrap();
+
+  let (answer, comment) = collect_completion_stream(resp).await;
+  eprintln!("answer: {:?}", answer);
+  eprintln!("comment: {:?}", comment);
+
+  let expected = r#"He and I were going to the store, but we didn’t have enough money"#;
+  let score = test.calculate_similarity(&answer, expected).await;
+  assert!(score > 0.7, "score: {}", score);
+
+  let expected = r#"The subject "Me and him" was corrected to "He and I" because "I" is the correct subject pronoun when referring to oneself in the subject position. "Was" was changed to "were" to agree with the plural subject. "Didn’t had" was corrected to "didn’t have" as "didn't" requires the base form of"#;
+  let score = test.calculate_similarity(&comment, expected).await;
   assert!(score > 0.7, "score: {}", score);
 }
 

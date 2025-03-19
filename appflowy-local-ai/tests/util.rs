@@ -43,6 +43,7 @@ impl LocalAITest {
 
     let persist_dir = tempfile::tempdir().unwrap().path().to_path_buf();
     config.set_rag_enabled(&persist_dir).unwrap();
+    config.set_log_level("debug".to_string());
 
     self.ollama_plugin.init_plugin(config).await.unwrap();
   }
@@ -193,4 +194,26 @@ pub async fn collect_json_stream(mut stream: ReceiverStream<Result<Value, Plugin
     list.push(s);
   }
   list.join("")
+}
+
+pub async fn collect_completion_stream(
+  mut stream: ReceiverStream<Result<Value, PluginError>>,
+) -> (String, String) {
+  let mut answer = Vec::new();
+  let mut comment = Vec::new();
+  while let Some(item) = stream.next().await {
+    if let Ok(Value::Object(mut map)) = item {
+      if let Some(v) = map.remove("1") {
+        if let Some(s) = v.as_str() {
+          answer.push(s.to_string());
+        }
+      }
+      if let Some(v) = map.remove("4") {
+        if let Some(s) = v.as_str() {
+          comment.push(s.to_string());
+        }
+      }
+    }
+  }
+  (answer.join(""), comment.join(""))
 }

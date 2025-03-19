@@ -210,14 +210,26 @@ impl OllamaAIPlugin {
     Ok(stream)
   }
 
-  pub async fn complete_text_2(
+  pub async fn complete_text_v2(
     &self,
-    content: serde_json::Value,
-  ) -> Result<ReceiverStream<anyhow::Result<Bytes, PluginError>>, PluginError> {
+    message: &str,
+    complete_type: u8,
+    format: Option<serde_json::Value>,
+    metadata: Option<serde_json::Value>,
+  ) -> Result<ReceiverStream<anyhow::Result<Value, PluginError>>, PluginError> {
+    trace!(
+      "[AI Plugin] complete text v2: {}, completion_type: {:?}, format: {:?}, metadata: {:?}",
+      message,
+      complete_type,
+      format,
+      metadata
+    );
     self.wait_until_plugin_ready().await?;
     let plugin = self.get_ai_plugin().await?;
     let operation = AIPluginOperation::new(plugin);
-    let stream = operation.complete_text_v2(content).await?;
+    let stream = operation
+      .complete_text_v2(message, complete_type, format, metadata)
+      .await?;
     Ok(stream)
   }
 
@@ -422,9 +434,8 @@ impl OllamaPluginConfig {
     self
   }
 
-  pub fn with_log_level(mut self, log_level: String) -> Self {
+  pub fn set_log_level(&mut self, log_level: String) {
     self.log_level = log_level;
-    self
   }
   pub fn set_rag_enabled(&mut self, persist_directory: &PathBuf) -> Result<()> {
     if !persist_directory.exists() {

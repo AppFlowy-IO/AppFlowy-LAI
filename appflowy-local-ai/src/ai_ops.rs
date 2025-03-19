@@ -4,8 +4,8 @@ use appflowy_plugin::core::plugin::Plugin;
 use appflowy_plugin::error::{PluginError, RemoteError};
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use serde_json::Value as JsonValue;
+use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Weak;
@@ -106,7 +106,7 @@ impl AIPluginOperation {
         "params": serde_json::Value::Object(inner_params)
     });
 
-    plugin.stream_request::<ChatStreamResponseV2Parser>("handle", &params)
+    plugin.stream_request::<JsonStringToJsonObject>("handle", &params)
   }
 
   pub async fn get_related_questions(&self, chat_id: &str) -> Result<Vec<String>, PluginError> {
@@ -158,18 +158,33 @@ impl AIPluginOperation {
 
     plugin.stream_request::<ChatStreamResponseParser>("handle", &params)
   }
-
-  #[instrument(level = "debug", skip(self), err)]
+  #[instrument(level = "debug", skip_all, err)]
   pub async fn complete_text_v2(
     &self,
-    content: serde_json::Value,
-  ) -> Result<ReceiverStream<Result<Bytes, PluginError>>, PluginError> {
+    message: &str,
+    complete_type: u8,
+    format: Option<Value>,
+    metadata: Option<Value>,
+  ) -> Result<ReceiverStream<Result<Value, PluginError>>, PluginError> {
     let plugin = self.get_plugin()?;
+
+    let mut inner_params = serde_json::Map::new();
+    inner_params.insert("text".to_string(), json!(message));
+    inner_params.insert("completion_type".to_string(), json!(complete_type));
+    if let Some(fmt) = format {
+      inner_params.insert("format".to_string(), fmt);
+    }
+
+    if let Some(metadata) = metadata {
+      inner_params.insert("metadata".to_string(), metadata);
+    }
+
     let params = json!({
-        "method": "complete_text",
-        "params": content
+        "method": "complete_text_v2",
+        "params": Value::Object(inner_params)
     });
-    plugin.stream_request::<ChatStreamResponseParser>("handle", &params)
+
+    plugin.stream_request::<JsonStringToJsonObject>("handle", &params)
   }
 
   #[instrument(level = "debug", skip(self), err)]
@@ -233,8 +248,8 @@ impl ResponseParser for ChatStreamResponseParser {
   }
 }
 
-pub struct ChatStreamResponseV2Parser;
-impl ResponseParser for ChatStreamResponseV2Parser {
+pub struct JsonStringToJsonObject;
+impl ResponseParser for JsonStringToJsonObject {
   type ValueType = serde_json::Value;
 
   fn parse_json(json: JsonValue) -> Result<Self::ValueType, RemoteError> {
@@ -274,7 +289,10 @@ pub enum CompleteTextType {
   SpellingAndGrammar = 2,
   MakeShorter = 3,
   MakeLonger = 4,
-  AskAI = 5,
+  ContinueWriting = 5,
+  Explain = 6,
+  AskAI = 7,
+  Custom = 8,
 }
 
 impl From<u8> for CompleteTextType {
@@ -284,8 +302,11 @@ impl From<u8> for CompleteTextType {
       2 => CompleteTextType::SpellingAndGrammar,
       3 => CompleteTextType::MakeShorter,
       4 => CompleteTextType::MakeLonger,
-      5 => CompleteTextType::AskAI,
-      _ => CompleteTextType::ImproveWriting,
+      5 => CompleteTextType::ContinueWriting,
+      6 => CompleteTextType::Explain,
+      7 => CompleteTextType::AskAI,
+      8 => CompleteTextType::Custom,
+      _ => CompleteTextType::AskAI,
     }
   }
 }

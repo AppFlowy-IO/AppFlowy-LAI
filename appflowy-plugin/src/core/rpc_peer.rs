@@ -272,15 +272,15 @@ impl<W: Write> RawPeer<W> {
             .as_ref()
             .map(|resp| resp.is_stream_end())
             .unwrap_or(false);
-          if !is_stream_end {
+          if is_stream_end {
+            trace!("[RPC] {} stream end", request_id);
+          } else {
             // when steam is not end, we need to put the stream callback back to pending in order to
             // receive the next stream message.
             if let Some(callback) = response_handler.get_stream_callback() {
               let mut pending = self.0.pending.lock();
               pending.insert(request_id, ResponseHandler::StreamCallback(callback));
             }
-          } else {
-            trace!("[RPC] {} stream end", request_id);
           }
         }
         let json = resp.map(|resp| resp.into_json());
