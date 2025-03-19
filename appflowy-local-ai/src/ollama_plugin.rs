@@ -252,7 +252,7 @@ impl OllamaAIPlugin {
         // We have the lock and can proceed with initialization.
         trace!("[AI Plugin] Creating chat plugin with config: {:?}", config);
         let plugin_info = PluginInfo {
-          name: "ollama_ai_plugin".to_string(),
+          name: "af_ollama_plugin".to_string(),
           exec_path: config.executable_path.clone(),
           exec_command: config.executable_command.clone(),
         };
