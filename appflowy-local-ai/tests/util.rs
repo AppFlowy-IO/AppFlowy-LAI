@@ -134,7 +134,7 @@ impl LocalAIConfiguration {
       chat_model_name,
       embedding_plugin_exe,
       embedding_model_name,
-      ollama_plugin_command: "ollama_ai_plugin".to_string(),
+      ollama_plugin_command: "af_ollama_plugin".to_string(),
     })
   }
 }

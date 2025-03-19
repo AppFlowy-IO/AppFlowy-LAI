@@ -69,8 +69,8 @@ jobs:
 
       - name: Download artifact from S3
         run: |
-          aws s3 cp  s3://${{ secrets.TEST_LOCAL_AI_BUCKET_NAME }}/macos-latest/ollama_ai_plugin.zip ollama_ai_plugin.zip
-          unzip ollama_ai_plugin.zip -d ollama_ai_plugin
+          aws s3 cp  s3://${{ secrets.TEST_LOCAL_AI_BUCKET_NAME }}/macos-latest/af_ollama_plugin.zip af_ollama_plugin.zip
+          unzip af_ollama_plugin.zip -d af_ollama_plugin
           ls
         shell: bash
 
@@ -78,7 +78,7 @@ jobs:
         run: |
           ls
           ABS_PATH=$(pwd)
-          OLLAMA_PLUGIN_EXE_PATH=$ABS_PATH/ollama_ai_plugin
+          OLLAMA_PLUGIN_EXE_PATH=$ABS_PATH/af_ollama_plugin
           
           cp dev.env .env
           sed -i '' 's|RUST_LOG=.*|RUST_LOG=trace|' .env
@@ -94,5 +94,5 @@ jobs:
 
       - name: Cleanup downloaded artifacts
         run: |
-          rm -rf ollama_ai_plugin.zip
-          rm -rf ollama_ai_plugin
+          rm -rf af_ollama_plugin.zip
+          rm -rf af_ollama_plugin
