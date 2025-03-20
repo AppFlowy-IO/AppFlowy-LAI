@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Once};
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;
+use tracing::trace;
 use tracing_subscriber::fmt::Subscriber;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::EnvFilter;
@@ -22,6 +23,9 @@ pub struct LocalAITest {
 
 impl LocalAITest {
   pub fn new() -> Result<Self> {
+    dotenv::dotenv().ok();
+    setup_log();
+
     let config = LocalAIConfiguration::new()?;
     let sidecar = Arc::new(PluginManager::new());
     let ollama_plugin = OllamaAIPlugin::new(sidecar.clone());
@@ -117,9 +121,6 @@ pub struct LocalAIConfiguration {
 
 impl LocalAIConfiguration {
   pub fn new() -> Result<Self> {
-    dotenv::dotenv().ok();
-    setup_log();
-
     // load from .env
     let ollama_server_url = dotenv::var("OLLAMA_SERVER_URL")?;
     let ollama_plugin_exe =
@@ -128,6 +129,9 @@ impl LocalAIConfiguration {
     let embedding_plugin_exe =
       PathBuf::from(dotenv::var("OLLAMA_EMBEDDING_EXE_PATH").unwrap_or_default());
     let embedding_model_name = dotenv::var("OLLAMA_EMBEDDING_MODEL_NAME")?;
+
+    trace!("Ollama server url: {}", ollama_server_url);
+    trace!("Ollama plugin exe: {:?}", ollama_plugin_exe);
 
     Ok(Self {
       ollama_server_url,
