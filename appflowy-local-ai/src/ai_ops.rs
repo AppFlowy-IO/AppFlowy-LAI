@@ -135,15 +135,13 @@ impl AIPluginOperation {
   }
 
   #[instrument(level = "debug", skip(self), err)]
-  pub async fn complete_text<T: Into<CompleteTextType> + Debug>(
+  pub async fn complete_text(
     &self,
     message: &str,
-    complete_type: T,
+    complete_type: u8,
     format: Option<serde_json::Value>,
   ) -> Result<ReceiverStream<Result<Bytes, PluginError>>, PluginError> {
     let plugin = self.get_plugin()?;
-    let complete_type = complete_type.into() as u8;
-
     let mut inner_params = serde_json::Map::new();
     inner_params.insert("text".to_string(), json!(message));
     inner_params.insert("completion_type".to_string(), json!(complete_type));

@@ -87,7 +87,7 @@ async fn ci_completion_text_test() {
     .ollama_plugin
     .complete_text(
       "tell me the book, atomic habits",
-      CompleteTextType::AskAI,
+      CompleteTextType::AskAI as u8,
       None,
     )
     .await

@@ -1,6 +1,4 @@
-use crate::ai_ops::{
-  AIPluginOperation, CompleteTextType, LocalAITranslateRowData, LocalAITranslateRowResponse,
-};
+use crate::ai_ops::{AIPluginOperation, LocalAITranslateRowData, LocalAITranslateRowResponse};
 use anyhow::{anyhow, Result};
 use appflowy_plugin::core::plugin::{
   Plugin, PluginId, PluginInfo, RunningState, RunningStateReceiver, RunningStateSender,
@@ -189,10 +187,10 @@ impl OllamaAIPlugin {
     Ok(())
   }
 
-  pub async fn complete_text<T: Into<CompleteTextType> + Debug>(
+  pub async fn complete_text(
     &self,
     message: &str,
-    complete_type: T,
+    complete_type: u8,
     format: Option<serde_json::Value>,
   ) -> Result<ReceiverStream<anyhow::Result<Bytes, PluginError>>, PluginError> {
     trace!(
