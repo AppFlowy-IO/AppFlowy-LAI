@@ -1,5 +1,5 @@
 use anyhow::anyhow;
-use appflowy_plugin::core::parser::{DefaultResponseParser, ResponseParser};
+use appflowy_plugin::core::parser::{EmptyResponseParser, ResponseParser};
 use appflowy_plugin::core::plugin::Plugin;
 use appflowy_plugin::error::{PluginError, RemoteError};
 use bytes::Bytes;
@@ -38,18 +38,22 @@ impl AIPluginOperation {
     plugin.async_request::<T>("handle", &request).await
   }
 
+  pub async fn plugin_info(&self) -> Result<Value, PluginError> {
+    let value = self
+      .send_request::<DataJsonParser>("system_info", json!({}))
+      .await?;
+    Ok(value)
+  }
+
   pub async fn create_chat(&self, chat_id: &str) -> Result<(), PluginError> {
     self
-      .send_request::<DefaultResponseParser>(
-        "create_chat",
-        json!({ "chat_id": chat_id, "top_k": 2}),
-      )
+      .send_request::<EmptyResponseParser>("create_chat", json!({ "chat_id": chat_id, "top_k": 2}))
       .await
   }
 
   pub async fn close_chat(&self, chat_id: &str) -> Result<(), PluginError> {
     self
-      .send_request::<DefaultResponseParser>("close_chat", json!({ "chat_id": chat_id }))
+      .send_request::<EmptyResponseParser>("close_chat", json!({ "chat_id": chat_id }))
       .await
   }
 
@@ -130,7 +134,7 @@ impl AIPluginOperation {
     let params = json!({ "metadata": metadata, "file_path": json!(file_path) });
     trace!("[AI Plugin] indexing file: {:?}", params);
     self
-      .send_request::<DefaultResponseParser>("embed_file", params)
+      .send_request::<EmptyResponseParser>("embed_file", params)
       .await
   }
 
@@ -230,6 +234,18 @@ impl ResponseParser for ChatResponseParser {
       .get("data")
       .and_then(|data| data.as_str())
       .map(String::from)
+      .ok_or(RemoteError::ParseResponse(json))
+  }
+}
+
+pub struct DataJsonParser;
+impl ResponseParser for DataJsonParser {
+  type ValueType = Value;
+
+  fn parse_json(json: JsonValue) -> Result<Self::ValueType, RemoteError> {
+    json
+      .get("data")
+      .map(Clone::clone)
       .ok_or(RemoteError::ParseResponse(json))
   }
 }

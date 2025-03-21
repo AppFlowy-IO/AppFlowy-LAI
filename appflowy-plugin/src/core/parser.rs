@@ -72,8 +72,8 @@ pub trait ResponseParser {
   fn parse_json(payload: JsonValue) -> Result<Self::ValueType, RemoteError>;
 }
 
-pub struct DefaultResponseParser;
-impl ResponseParser for DefaultResponseParser {
+pub struct EmptyResponseParser;
+impl ResponseParser for EmptyResponseParser {
   type ValueType = ();
 
   fn parse_json(_payload: JsonValue) -> Result<Self::ValueType, RemoteError> {
