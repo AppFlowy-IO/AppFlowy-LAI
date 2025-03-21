@@ -190,14 +190,7 @@ impl Plugin {
   }
 
   pub fn shutdown(&self) {
-    match self.peer.send_rpc_request("shutdown", &json!({})) {
-      Ok(_) => {
-        info!("shutting down plugin {}", self);
-      },
-      Err(err) => {
-        warn!("error sending shutdown to plugin {}: {:?}", self, err);
-      },
-    }
+    let _ = self.peer.send_rpc_request("shutdown", &json!({}));
   }
 
   pub fn subscribe_running_state(&self) -> WatchStream<RunningState> {
