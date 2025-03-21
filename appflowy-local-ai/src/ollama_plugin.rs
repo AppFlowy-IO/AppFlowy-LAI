@@ -392,13 +392,7 @@ impl OllamaAIPlugin {
     .await;
 
     match result {
-      Ok(_) => {
-        trace!(
-          "[AI Plugin] is ready, current version: {:?}",
-          self.plugin_info().await?
-        );
-        Ok(())
-      },
+      Ok(_) => Ok(()),
       Err(_) => Err(anyhow!("Timeout while waiting for chat plugin to be ready")),
     }
   }
