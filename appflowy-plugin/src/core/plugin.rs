@@ -22,7 +22,7 @@ use tokio_stream::wrappers::{ReceiverStream, WatchStream};
 #[cfg(windows)]
 use winreg::{enums::*, RegKey};
 
-use tracing::{error, info, trace, warn};
+use tracing::{error, info, trace};
 
 #[derive(
   Default, Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize,

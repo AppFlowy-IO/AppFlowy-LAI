@@ -244,8 +244,7 @@ impl ResponseParser for DataJsonParser {
 
   fn parse_json(json: JsonValue) -> Result<Self::ValueType, RemoteError> {
     json
-      .get("data")
-      .map(Clone::clone)
+      .get("data").cloned()
       .ok_or(RemoteError::ParseResponse(json))
   }
 }
