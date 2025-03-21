@@ -22,7 +22,7 @@ use tokio_stream::wrappers::{ReceiverStream, WatchStream};
 #[cfg(windows)]
 use winreg::{enums::*, RegKey};
 
-use tracing::{error, info, trace, warn};
+use tracing::{error, info, trace};
 
 #[derive(
   Default, Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize,
@@ -190,14 +190,7 @@ impl Plugin {
   }
 
   pub fn shutdown(&self) {
-    match self.peer.send_rpc_request("shutdown", &json!({})) {
-      Ok(_) => {
-        info!("shutting down plugin {}", self);
-      },
-      Err(err) => {
-        warn!("error sending shutdown to plugin {}: {:?}", self, err);
-      },
-    }
+    let _ = self.peer.send_rpc_request("shutdown", &json!({}));
   }
 
   pub fn subscribe_running_state(&self) -> WatchStream<RunningState> {

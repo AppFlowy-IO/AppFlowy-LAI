@@ -1,5 +1,5 @@
 use anyhow::anyhow;
-use appflowy_plugin::core::parser::{DefaultResponseParser, ResponseParser};
+use appflowy_plugin::core::parser::{EmptyResponseParser, ResponseParser};
 use appflowy_plugin::core::plugin::Plugin;
 use appflowy_plugin::error::{PluginError, RemoteError};
 use serde_json::Value as JsonValue;
@@ -40,7 +40,7 @@ impl EmbeddingPluginOperation {
     let params =
       json!({"method": "embed_text", "params": {"input": message, "metadata": metadata }});
     plugin
-      .async_request::<DefaultResponseParser>("handle", &params)
+      .async_request::<EmptyResponseParser>("handle", &params)
       .await
   }
 

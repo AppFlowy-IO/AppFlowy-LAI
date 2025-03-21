@@ -47,6 +47,13 @@ impl OllamaAIPlugin {
     }
   }
 
+  pub async fn plugin_info(&self) -> Result<Value, PluginError> {
+    let plugin = self.get_ai_plugin().await?;
+    let operation = AIPluginOperation::new(plugin);
+    let version = operation.plugin_info().await?;
+    Ok(version)
+  }
+
   /// Creates a new chat session.
   ///
   /// # Arguments
@@ -296,6 +303,23 @@ impl OllamaAIPlugin {
         let plugin = self.plugin_manager.init_plugin(plugin_id, params).await?;
         info!("[AI Plugin] {} setup success", plugin);
         self.plugin_config.write().await.replace(config);
+
+        let mut rx = plugin.subscribe_running_state();
+        let weak_plugin = Arc::downgrade(&plugin);
+        let timeout_duration = Duration::from_secs(30);
+        let _ = timeout(timeout_duration, async {
+          while let Some(state) = rx.next().await {
+            if state.is_running() {
+              let operation = AIPluginOperation::new(weak_plugin);
+              if let Ok(Value::Object(o)) = operation.plugin_info().await {
+                info!("[AI Plugin] using plugin: {:?}", o);
+              }
+              break;
+            }
+          }
+        })
+        .await;
+
         Ok(())
       },
       Err(_) => {
@@ -356,7 +380,6 @@ impl OllamaAIPlugin {
     if !is_loading {
       return Ok(());
     }
-    info!("[AI Plugin] wait for chat plugin to be ready");
     let mut rx = self.subscribe_running_state();
     let timeout_duration = Duration::from_secs(30);
     let result = timeout(timeout_duration, async {
@@ -369,10 +392,7 @@ impl OllamaAIPlugin {
     .await;
 
     match result {
-      Ok(_) => {
-        trace!("[AI Plugin] is ready");
-        Ok(())
-      },
+      Ok(_) => Ok(()),
       Err(_) => Err(anyhow!("Timeout while waiting for chat plugin to be ready")),
     }
   }

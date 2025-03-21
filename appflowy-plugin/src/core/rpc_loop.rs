@@ -156,8 +156,8 @@ impl<W: Write + Send> RpcLoop<W> {
 
       trace!("[RPC] starting main loop for plugin: {:?}", plugin_id);
 
-      // 1. Spawn a new thread for reading data from a stream.
-      // 2. Continuously read data from the stream.
+      // 1. Spawn a new thread for reading data from a plugin.
+      // 2. Continuously read data from plugin.
       // 3. Parse the data as JSON.
       // 4. Handle the JSON data as either a response or another type of JSON object.
       // 5. Manage errors and connection status.
@@ -165,7 +165,7 @@ impl<W: Write + Send> RpcLoop<W> {
         let mut stream = buffer_read_fn();
         loop {
           if self.peer.needs_exit() {
-            trace!("[RPC] exit peer loop");
+            trace!("[RPC] exit plugin read loop");
             break;
           }
           let json = match self.reader.next(&mut stream) {
@@ -184,9 +184,11 @@ impl<W: Write + Send> RpcLoop<W> {
             None => continue,
             Some(json) => {
               if json.is_shutdown() {
-                debug!("[RPC] received remote process shutdown signal");
-                self.peer.put_rpc_object(Ok(json));
-                continue;
+                debug!("[RPC] received plugin process shutdown signal");
+                if self.peer.0.is_blocking() {
+                  self.peer.shutdown(plugin_id);
+                }
+                break;
               }
 
               if json.is_response() {
@@ -221,6 +223,8 @@ impl<W: Write + Send> RpcLoop<W> {
           peer: &peer,
           plugin_id,
         };
+
+        // next_read will become available when the peer calls put_rpc_object.
         let read_result = next_read(&peer, &ctx);
         let json = match read_result {
           Ok(json) => json,
@@ -232,7 +236,10 @@ impl<W: Write + Send> RpcLoop<W> {
 
         if json.is_shutdown() {
           peer.shutdown(plugin_id);
-          return ReadError::Io(io::Error::new(io::ErrorKind::Interrupted, "shutdown"));
+          return ReadError::Io(io::Error::new(
+            io::ErrorKind::Interrupted,
+            "plugin shutdown",
+          ));
         }
 
         match json.into_rpc::<H::Request>() {
@@ -267,7 +274,7 @@ impl<W: Write + Send> RpcLoop<W> {
   }
 }
 
-/// retrieves the next available read result from a peer, performing idle work if no result is
+/// retrieves the next available read result from a peer(Plugin), performing idle work if no result is
 /// immediately available.
 fn next_read<W>(peer: &RawPeer<W>, _ctx: &RpcCtx) -> Result<RpcObject, ReadError>
 where

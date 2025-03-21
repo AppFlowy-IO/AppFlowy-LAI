@@ -15,6 +15,10 @@ async fn load_chat_model_test() {
   let test = LocalAITest::new().unwrap();
   test.init_chat_plugin().await;
 
+  let plugin_info = test.ollama_plugin.plugin_info().await.unwrap();
+  println!("plugin info: {:?}", plugin_info);
+  assert!(plugin_info.get("version").is_some());
+
   let chat_id = uuid::Uuid::new_v4().to_string();
   let resp = test
     .send_chat_message(&chat_id, "translate 你好 to english")

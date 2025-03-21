@@ -15,7 +15,7 @@ use crate::util::{get_operating_system, OperatingSystem};
 use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::{Arc, Weak};
 use tokio::sync::RwLock;
-use tracing::{error, info, instrument, trace, warn};
+use tracing::{error, info, instrument, trace};
 
 pub struct PluginManager {
   state: Arc<Mutex<PluginState>>,
@@ -187,10 +187,7 @@ impl PluginState {
         plugin.shutdown();
         Some(plugin)
       },
-      None => {
-        warn!("[RPC] plugin {:?} not found", id);
-        None
-      },
+      None => None,
     }
   }
 }
