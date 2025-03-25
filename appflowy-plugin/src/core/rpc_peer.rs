@@ -196,7 +196,7 @@ impl<W: Write> RawPeer<W> {
   /// This function generates a unique ID for the request, stores the response handler,
   /// and sends the RPC request. If sending fails, it immediately invokes the response handler with an error.
   fn send_rpc(&self, method: &str, params: &JsonValue, response_handler: ResponseHandler) {
-    trace!("[RPC] call method: {} params: {:?}", method, params);
+    trace!("[RPC] call:{} :{:?}", method, params);
     let id = self.0.request_id_counter.fetch_add(1, Ordering::Relaxed);
     {
       if let Some(mut pending) = self.0.pending.try_lock() {

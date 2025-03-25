@@ -21,7 +21,7 @@ pub struct PluginManager {
   state: Arc<Mutex<PluginState>>,
   plugin_id_counter: Arc<AtomicI64>,
   operating_system: OperatingSystem,
-  running_plugins: RwLock<HashMap<String, PluginId>>,
+  running_plugins: Arc<RwLock<HashMap<String, PluginId>>>,
 }
 
 impl Default for PluginManager {
@@ -38,7 +38,7 @@ impl PluginManager {
       })),
       plugin_id_counter: Arc::new(Default::default()),
       operating_system: get_operating_system(),
-      running_plugins: Default::default(),
+      running_plugins: Arc::new(Default::default()),
     }
   }
 
@@ -63,7 +63,14 @@ impl PluginManager {
     drop(write_guard);
 
     let weak_state = WeakPluginState(Arc::downgrade(&self.state));
-    start_plugin_process(plugin_info, plugin_id, weak_state, running_state).await?;
+    start_plugin_process(
+      plugin_info,
+      plugin_id,
+      weak_state,
+      running_state,
+      self.running_plugins.clone(),
+    )
+    .await?;
     Ok(plugin_id)
   }
 

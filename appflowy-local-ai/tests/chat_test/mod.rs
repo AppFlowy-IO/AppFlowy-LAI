@@ -150,6 +150,43 @@ async fn ci_completion_text_v2_test() {
 }
 
 #[tokio::test]
+async fn ci_completion_text_v2_unicode_test() {
+  let test = LocalAITest::new().unwrap();
+  test.init_chat_plugin().await;
+
+  let chat_plugin = test
+    .ollama_plugin
+    .get_ai_plugin()
+    .await
+    .unwrap()
+    .upgrade()
+    .unwrap();
+  let mut state_rx = chat_plugin.subscribe_running_state();
+  tokio::spawn(async move {
+    while let Some(state) = state_rx.next().await {
+      eprintln!("chat state: {:?}", state);
+    }
+  });
+
+  let resp = test
+    .ollama_plugin
+    .complete_text_v2(
+      "He starts work everyday at 8 a.m. 然后他开始工作了一整天， 没有♨️",
+      CompleteTextType::ImproveWriting as u8,
+      None,
+      Some(json!({
+        "object_id": "123",
+      })),
+    )
+    .await
+    .unwrap();
+
+  let (answer, comment) = collect_completion_stream(resp).await;
+  eprintln!("answer: {:?}", answer);
+  eprintln!("comment: {:?}", comment);
+}
+
+#[tokio::test]
 async fn ci_chat_with_pdf() {
   let test = LocalAITest::new().unwrap();
   test.init_chat_plugin().await;
