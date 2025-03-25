@@ -151,7 +151,7 @@ impl<W: Write> RawPeer<W> {
   ///
   /// This function serializes the JSON value, appends a newline, and writes it to the underlying writer.
   fn send(&self, json: &JsonValue) -> Result<(), io::Error> {
-    let mut s = serde_json::to_string(json).unwrap();
+    let mut s = serde_json::to_string(json)?;
     s.push('\n');
     self.0.writer.lock().write_all(s.as_bytes())
   }
@@ -196,7 +196,7 @@ impl<W: Write> RawPeer<W> {
   /// This function generates a unique ID for the request, stores the response handler,
   /// and sends the RPC request. If sending fails, it immediately invokes the response handler with an error.
   fn send_rpc(&self, method: &str, params: &JsonValue, response_handler: ResponseHandler) {
-    trace!("[RPC] call method: {} params: {:?}", method, params);
+    trace!("[RPC] call:{} :{:?}", method, params);
     let id = self.0.request_id_counter.fetch_add(1, Ordering::Relaxed);
     {
       if let Some(mut pending) = self.0.pending.try_lock() {

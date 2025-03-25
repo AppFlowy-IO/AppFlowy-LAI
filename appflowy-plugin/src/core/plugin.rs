@@ -1,5 +1,6 @@
 use crate::error::PluginError;
 use crate::manager::WeakPluginState;
+use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::fs;
 use std::process::Command;
@@ -16,7 +17,7 @@ use std::process::{Child, Stdio};
 use std::sync::Arc;
 use std::thread;
 use std::time::Instant;
-use tokio::sync::watch;
+use tokio::sync::{watch, RwLock};
 use tokio_stream::wrappers::{ReceiverStream, WatchStream};
 
 #[cfg(windows)]
@@ -210,9 +211,19 @@ pub(crate) async fn start_plugin_process(
   id: PluginId,
   state: WeakPluginState,
   running_state: RunningStateSender,
+  running_plugins: Arc<RwLock<HashMap<String, PluginId>>>,
 ) -> Result<(), anyhow::Error> {
   trace!("start plugin process: {:?}, {:?}", id, plugin_info);
   let (tx, ret) = tokio::sync::oneshot::channel();
+
+  let (plugin_exit_tx, plugin_exit_rx) = tokio::sync::oneshot::channel();
+  let plugin_name = plugin_info.name.clone();
+  tokio::spawn(async move {
+    if plugin_exit_rx.await.is_ok() {
+      info!("Remove plugin from running list: {:?}", plugin_name);
+      let _ = running_plugins.write().await.remove(plugin_name.as_str());
+    }
+  });
 
   let spawn_result = thread::Builder::new()
     .name(format!("<{}> core host thread", &plugin_info.name))
@@ -294,6 +305,7 @@ pub(crate) async fn start_plugin_process(
             &mut state,
           );
           let _ = running_state.send(RunningState::Stopped { plugin_id });
+          let _ = plugin_exit_tx.send(());
           state.plugin_exit(id, err);
         },
         Err(err) => {
