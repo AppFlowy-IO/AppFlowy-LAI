@@ -151,7 +151,7 @@ impl<W: Write> RawPeer<W> {
   ///
   /// This function serializes the JSON value, appends a newline, and writes it to the underlying writer.
   fn send(&self, json: &JsonValue) -> Result<(), io::Error> {
-    let mut s = serde_json::to_string(json).unwrap();
+    let mut s = serde_json::to_string(json)?;
     s.push('\n');
     self.0.writer.lock().write_all(s.as_bytes())
   }
