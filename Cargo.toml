@@ -1,13 +1,15 @@
 [workspace]
 members = [
-  "local-ai-client",
-  "plugin-core",
+  "af-local-ai",
+  "af-mcp",
+  "af-plugin",
 ]
 resolver = "2"
 
 [workspace.dependencies]
-plugin-core = { path = "plugin-core" }
-local-ai-client = { path = "local-ai-client" }
+af-plugin = { path = "af-plugin" }
+af-local-ai = { path = "af-local-ai" }
+mcp-server = { path = "af-mcp" }
 parking_lot = "0.12"
 tracing = "0.1"
 anyhow = "1.0"

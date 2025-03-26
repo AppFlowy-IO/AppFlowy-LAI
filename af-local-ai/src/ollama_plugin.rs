@@ -1,10 +1,10 @@
 use crate::ai_ops::{AIPluginOperation, LocalAITranslateRowData, LocalAITranslateRowResponse};
-use anyhow::{anyhow, Result};
-use plugin_core::core::plugin::{
+use af_plugin::core::plugin::{
   Plugin, PluginId, PluginInfo, RunningState, RunningStateReceiver, RunningStateSender,
 };
-use plugin_core::error::PluginError;
-use plugin_core::manager::PluginManager;
+use af_plugin::error::PluginError;
+use af_plugin::manager::PluginManager;
+use anyhow::{anyhow, Result};
 
 use bytes::Bytes;
 

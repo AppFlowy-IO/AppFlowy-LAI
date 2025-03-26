@@ -1,13 +1,13 @@
 use crate::embedding_ops::EmbeddingPluginOperation;
 use std::collections::HashMap;
 
-use anyhow::anyhow;
-use anyhow::Result;
-use plugin_core::core::plugin::{
+use af_plugin::core::plugin::{
   Plugin, PluginInfo, RunningState, RunningStateReceiver, RunningStateSender,
 };
-use plugin_core::error::PluginError;
-use plugin_core::manager::PluginManager;
+use af_plugin::error::PluginError;
+use af_plugin::manager::PluginManager;
+use anyhow::anyhow;
+use anyhow::Result;
 use serde_json::{json, Value};
 use std::path::PathBuf;
 use std::sync::{Arc, Weak};

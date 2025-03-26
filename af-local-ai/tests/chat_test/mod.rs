@@ -4,7 +4,7 @@ use crate::util::{
 
 use std::collections::HashMap;
 
-use appflowy_local_ai::ai_ops::{CompleteTextType, LocalAITranslateItem, LocalAITranslateRowData};
+use af_local_ai::ai_ops::{CompleteTextType, LocalAITranslateItem, LocalAITranslateRowData};
 
 use serde_json::json;
 
