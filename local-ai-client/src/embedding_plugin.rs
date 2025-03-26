@@ -3,11 +3,11 @@ use std::collections::HashMap;
 
 use anyhow::anyhow;
 use anyhow::Result;
-use appflowy_plugin::core::plugin::{
+use plugin_core::core::plugin::{
   Plugin, PluginInfo, RunningState, RunningStateReceiver, RunningStateSender,
 };
-use appflowy_plugin::error::PluginError;
-use appflowy_plugin::manager::PluginManager;
+use plugin_core::error::PluginError;
+use plugin_core::manager::PluginManager;
 use serde_json::{json, Value};
 use std::path::PathBuf;
 use std::sync::{Arc, Weak};

@@ -1,7 +1,7 @@
 use anyhow::anyhow;
-use appflowy_plugin::core::parser::{EmptyResponseParser, ResponseParser};
-use appflowy_plugin::core::plugin::Plugin;
-use appflowy_plugin::error::{PluginError, RemoteError};
+use plugin_core::core::parser::{EmptyResponseParser, ResponseParser};
+use plugin_core::core::plugin::Plugin;
+use plugin_core::error::{PluginError, RemoteError};
 use serde_json::Value as JsonValue;
 use serde_json::{json, Value};
 use std::collections::HashMap;

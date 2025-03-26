@@ -1,13 +1,13 @@
 [workspace]
 members = [
-  "appflowy-local-ai",
-  "appflowy-plugin",
+  "local-ai-client",
+  "plugin-core",
 ]
 resolver = "2"
 
 [workspace.dependencies]
-appflowy-plugin = { path = "appflowy-plugin" }
-appflowy-local-ai-chat = { path = "appflowy-local-ai" }
+plugin-core = { path = "plugin-core" }
+local-ai-client = { path = "local-ai-client" }
 parking_lot = "0.12"
 tracing = "0.1"
 anyhow = "1.0"
