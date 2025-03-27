@@ -1,9 +1,11 @@
 use crate::entities::ToolsList;
 use anyhow::Result;
+use mcp_daemon::protocol::RequestOptions;
 use mcp_daemon::transport::{ClientStdioTransport, Transport};
 use mcp_daemon::types::Implementation;
 use mcp_daemon::Client;
-use serde_json::Value;
+use serde_json::{json, Value};
+use std::time::Duration;
 use tracing::{error, info};
 
 #[derive(Debug, Clone)]
@@ -73,6 +75,28 @@ impl MCPClient {
 
     let tools = serde_json::from_value::<ToolsList>(resp)?;
     Ok(tools)
+  }
+
+  /// Send a tools/call request to MCP server with parameters
+  pub async fn call_tool(
+    &self,
+    name: &str,
+    arguments: Option<Value>,
+    timeout: Option<Duration>,
+  ) -> Result<Value> {
+    let timeout = timeout.unwrap_or_else(|| Duration::from_secs(5));
+    let resp = self
+      .client
+      .request(
+        "tools/call",
+        Some(json!({
+          "name": name,
+          "arguments": arguments
+        })),
+        RequestOptions::default().timeout(timeout),
+      )
+      .await?;
+    Ok(resp)
   }
 
   pub async fn stop(&mut self) -> Result<()> {

@@ -1,2 +1,2 @@
 pub mod client;
-mod entities;
+pub mod entities;

@@ -1,4 +1,5 @@
 use af_mcp::client::{MCPClient, MCPServerConfig};
+use serde_json::json;
 
 #[tokio::test]
 async fn connect_to_server() {
@@ -66,4 +67,25 @@ async fn connect_to_server() {
       expected
     );
   }
+
+  let resp = client
+    .call_tool("list_allowed_dirs", Some(json!({})), None)
+    .await
+    .unwrap();
+  dbg!(&resp);
+  let resp = client
+    .call_tool("list_allowed_dirs", Some(json!({})), None)
+    .await
+    .unwrap();
+  dbg!(&resp);
+
+  // Get the "content" field as an array and extract the first element.
+  let content_array = resp.get("content").unwrap().as_array().unwrap();
+  let first_content = content_array.get(0).unwrap();
+
+  // Extract the "text" field from the first element.
+  let content_text = first_content.get("text").unwrap().as_str().unwrap();
+
+  assert!(content_text.ends_with("af-mcp"));
+  assert!(!resp.get("isError").unwrap().as_bool().unwrap());
 }
