@@ -81,7 +81,7 @@ async fn connect_to_server() {
 
   // Get the "content" field as an array and extract the first element.
   let content_array = resp.get("content").unwrap().as_array().unwrap();
-  let first_content = content_array.get(0).unwrap();
+  let first_content = content_array.first().unwrap();
 
   // Extract the "text" field from the first element.
   let content_text = first_content.get("text").unwrap().as_str().unwrap();
