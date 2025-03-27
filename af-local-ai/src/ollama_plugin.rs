@@ -1,10 +1,10 @@
 use crate::ai_ops::{AIPluginOperation, LocalAITranslateRowData, LocalAITranslateRowResponse};
-use anyhow::{anyhow, Result};
-use appflowy_plugin::core::plugin::{
+use af_plugin::core::plugin::{
   Plugin, PluginId, PluginInfo, RunningState, RunningStateReceiver, RunningStateSender,
 };
-use appflowy_plugin::error::PluginError;
-use appflowy_plugin::manager::PluginManager;
+use af_plugin::error::PluginError;
+use af_plugin::manager::PluginManager;
+use anyhow::{anyhow, Result};
 
 use bytes::Bytes;
 

@@ -1,13 +1,13 @@
 use crate::embedding_ops::EmbeddingPluginOperation;
 use std::collections::HashMap;
 
-use anyhow::anyhow;
-use anyhow::Result;
-use appflowy_plugin::core::plugin::{
+use af_plugin::core::plugin::{
   Plugin, PluginInfo, RunningState, RunningStateReceiver, RunningStateSender,
 };
-use appflowy_plugin::error::PluginError;
-use appflowy_plugin::manager::PluginManager;
+use af_plugin::error::PluginError;
+use af_plugin::manager::PluginManager;
+use anyhow::anyhow;
+use anyhow::Result;
 use serde_json::{json, Value};
 use std::path::PathBuf;
 use std::sync::{Arc, Weak};

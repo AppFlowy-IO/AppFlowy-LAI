@@ -1,5 +1,5 @@
 [package]
-name = "appflowy-plugin"
+name = "af-plugin"
 version = "0.1.0"
 edition = "2021"
 

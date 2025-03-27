@@ -1,7 +1,7 @@
+use af_plugin::core::parser::{EmptyResponseParser, ResponseParser};
+use af_plugin::core::plugin::Plugin;
+use af_plugin::error::{PluginError, RemoteError};
 use anyhow::anyhow;
-use appflowy_plugin::core::parser::{EmptyResponseParser, ResponseParser};
-use appflowy_plugin::core::plugin::Plugin;
-use appflowy_plugin::error::{PluginError, RemoteError};
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;

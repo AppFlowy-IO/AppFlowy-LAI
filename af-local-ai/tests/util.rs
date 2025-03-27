@@ -1,7 +1,7 @@
+use af_local_ai::ollama_plugin::{OllamaAIPlugin, OllamaPluginConfig};
+use af_plugin::error::PluginError;
+use af_plugin::manager::PluginManager;
 use anyhow::Result;
-use appflowy_local_ai::ollama_plugin::{OllamaAIPlugin, OllamaPluginConfig};
-use appflowy_plugin::error::PluginError;
-use appflowy_plugin::manager::PluginManager;
 
 use bytes::Bytes;
 use serde_json::{json, Value};
