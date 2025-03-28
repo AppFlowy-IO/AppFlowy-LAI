@@ -120,7 +120,9 @@ impl<W: Write + Send + 'static> Peer for RawPeer<W> {
     let (tx, rx) = mpsc::channel();
     self.0.is_blocking.store(true, Ordering::Release);
     self.send_rpc(method, params, ResponseHandler::Chan(tx));
-    rx.recv().unwrap_or(Err(PluginError::PeerDisconnect))
+    let result = rx.recv().unwrap_or(Err(PluginError::PeerDisconnect));
+    self.0.is_blocking.store(false, Ordering::Release);
+    result
   }
 
   fn request_is_pending(&self) -> bool {
@@ -198,28 +200,20 @@ impl<W: Write> RawPeer<W> {
   fn send_rpc(&self, method: &str, params: &JsonValue, response_handler: ResponseHandler) {
     trace!("[RPC] call:{} :{:?}", method, params);
     let id = self.0.request_id_counter.fetch_add(1, Ordering::Relaxed);
-    {
-      if let Some(mut pending) = self.0.pending.try_lock() {
-        pending.insert(id, response_handler);
-      }
-    }
 
-    // Call the ResponseHandler if the send fails. Otherwise, the response will be
-    // called in handle_response.
-    if let Err(e) = self.send(&json!({
+    let msg = json!({
         "id": id,
         "method": method,
         "params": params,
-    })) {
-      if let Some(mut pending) = self.0.pending.try_lock() {
-        let handler = pending.remove(&id);
-        drop(pending);
+    });
 
-        if let Some(rh) = handler {
-          rh.invoke(Err(PluginError::Io(e)));
-        }
-      }
+    if let Err(e) = self.send(&msg) {
+      response_handler.invoke(Err(PluginError::Io(e)));
+      return;
     }
+
+    let mut pending = self.0.pending.lock();
+    pending.insert(id, response_handler);
   }
 
   /// Processes an incoming response to an RPC request.

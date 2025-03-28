@@ -149,8 +149,8 @@ pub fn setup_log() {
   START.call_once(|| {
     let level = "trace";
     let mut filters = vec![];
-    filters.push(format!("appflowy_plugin={}", level));
-    filters.push(format!("appflowy_local_ai={}", level));
+    filters.push(format!("af_local_ai={}", level));
+    filters.push(format!("af_plugin={}", level));
     std::env::set_var("RUST_LOG", filters.join(","));
 
     let subscriber = Subscriber::builder()

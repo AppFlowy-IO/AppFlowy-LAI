@@ -173,8 +173,9 @@ impl<W: Write + Send> RpcLoop<W> {
             Err(err) => {
               if self.peer.0.is_blocking() {
                 self.peer.unexpected_disconnect(plugin_id, &err);
+              } else {
+                self.peer.put_rpc_object(Err(err));
               }
-              self.peer.put_rpc_object(Err(err));
               break;
             },
           };

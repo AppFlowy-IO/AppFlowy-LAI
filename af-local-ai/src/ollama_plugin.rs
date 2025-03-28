@@ -50,8 +50,8 @@ impl OllamaAIPlugin {
   pub async fn plugin_info(&self) -> Result<Value, PluginError> {
     let plugin = self.get_ai_plugin().await?;
     let operation = AIPluginOperation::new(plugin);
-    let version = operation.plugin_info().await?;
-    Ok(version)
+    let info = operation.plugin_info().await?;
+    Ok(info)
   }
 
   /// Creates a new chat session.
