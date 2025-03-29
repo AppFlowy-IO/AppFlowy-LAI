@@ -93,7 +93,7 @@ impl PluginManager {
     }
 
     info!("[AI Plugin] removing plugin {:?}", id);
-    self.state.lock().plugin_disconnect(id, Ok(()));
+    self.state.lock().disconnect_plugin(id, Ok(()));
 
     let mut running_plugins = self.running_plugins.write().await;
     let key_to_remove = running_plugins
@@ -166,7 +166,7 @@ pub struct PluginState {
 }
 
 impl PluginState {
-  pub fn plugin_connect(&mut self, plugin: Result<Plugin, io::Error>) {
+  pub fn connect_plugin(&mut self, plugin: Result<Plugin, io::Error>) {
     match plugin {
       Ok(plugin) => {
         info!("[RPC] {} connected", plugin);
@@ -178,7 +178,7 @@ impl PluginState {
     }
   }
 
-  pub fn plugin_disconnect(
+  pub fn disconnect_plugin(
     &mut self,
     id: PluginId,
     error: Result<(), ReadError>,
@@ -209,13 +209,13 @@ impl WeakPluginState {
 
   pub fn plugin_connect(&self, plugin: Result<Plugin, io::Error>) {
     if let Some(state) = self.upgrade() {
-      state.lock().plugin_connect(plugin)
+      state.lock().connect_plugin(plugin)
     }
   }
 
   pub fn plugin_exit(&self, plugin: PluginId, error: Result<(), ReadError>) {
     if let Some(core) = self.upgrade() {
-      core.lock().plugin_disconnect(plugin, error);
+      core.lock().disconnect_plugin(plugin, error);
     }
   }
 }

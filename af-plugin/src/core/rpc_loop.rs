@@ -10,7 +10,7 @@ use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 use tokio::io;
-use tracing::{debug, error, trace};
+use tracing::{debug, error, info, trace};
 
 const MAX_IDLE_WAIT: Duration = Duration::from_millis(5);
 
@@ -130,22 +130,6 @@ impl<W: Write + Send> RpcLoop<W> {
     BufferReadFn: Send + FnOnce() -> R,
     H: Handler,
   {
-    // uses `crossbeam_utils::thread::scope` for thread management,
-    // which offers several advantages over `std::thread`:
-    // 1. Scoped Threads: Guarantees thread termination when the scope ends,
-    //    preventing resource leaks.
-    // 2. Simplified Lifetime Management: Allows threads to borrow data from
-    //    their parent stack frame, enabling more ergonomic code.
-    // 3. Improved Safety: Prevents threads from outliving the data they operate on,
-    //    reducing risks of data races and use-after-free errors.
-    // 4. Efficiency: Potentially more efficient due to known thread lifetimes,
-    //    leading to better resource management.
-    // 5. Error Propagation: Simplifies propagating errors from spawned threads
-    //    back to the parent thread.
-    // 6. Consistency with Rust's Ownership Model: Aligns well with Rust's
-    //    ownership and borrowing rules.
-    // 7. Automatic Thread Joining: No need for manual thread joining, reducing
-    //    the risk of thread management errors.
     let exit = crossbeam_utils::thread::scope(|scope| {
       let peer = self.get_raw_peer();
       peer.reset_needs_exit();
@@ -165,7 +149,7 @@ impl<W: Write + Send> RpcLoop<W> {
         let mut stream = buffer_read_fn();
         loop {
           if self.peer.needs_exit() {
-            trace!("[RPC] exit plugin read loop");
+            info!("[RPC] exit plugin read loop");
             break;
           }
           let json = match self.reader.next(&mut stream) {
@@ -259,7 +243,6 @@ impl<W: Write + Send> RpcLoop<W> {
             return ReadError::UnknownRequest(err);
           },
           Ok(Call::Message(_msg)) => {
-            #[cfg(feature = "verbose")]
             trace!("[RPC {}] logging: {}", _plugin_name, _msg);
           },
         }
