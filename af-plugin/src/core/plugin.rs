@@ -126,6 +126,12 @@ pub struct Plugin {
   pub(crate) process: Arc<Child>,
   pub(crate) running_state: RunningStateSender,
 }
+impl Drop for Plugin {
+  fn drop(&mut self) {
+    info!("[AI plugin]: shutdown plugin when drop: {:?}", self.id);
+    self.shutdown();
+  }
+}
 
 impl Display for Plugin {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
