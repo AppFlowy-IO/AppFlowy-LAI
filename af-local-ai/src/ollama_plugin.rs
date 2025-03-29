@@ -25,7 +25,7 @@ use tracing::{error, info, instrument, trace};
 
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct PluginInfo {
-  version: String,
+  pub version: String,
 }
 
 pub struct OllamaAIPlugin {
