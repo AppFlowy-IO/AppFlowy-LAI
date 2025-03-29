@@ -279,7 +279,11 @@ pub(crate) async fn start_plugin_process(
 
       command.env("PYTHONIOENCODING", "utf8");
       if cfg!(windows) {
+        command.env("PYTHONIOENCODING", "utf8");
         command.env("PYTHONLEGACYWINDOWSSTDIO", "0");
+        // Add these for Windows:
+        command.env("PYTHONUTF8", "1"); // Forces UTF-8 mode
+        command.env("PYTHONIOENCODING", "utf-8:surrogateescape");
       } else {
         command.env("LANG", "en_US.UTF-8");
         command.env("LC_ALL", "en_US.UTF-8");
