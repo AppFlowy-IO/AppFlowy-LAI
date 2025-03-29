@@ -208,24 +208,24 @@ impl Plugin {
 }
 
 #[derive(Debug)]
-pub struct PluginInfo {
+pub struct PluginConfig {
   pub name: String,
   pub exec_path: PathBuf,
   pub exec_command: String,
 }
 
 pub(crate) async fn start_plugin_process(
-  plugin_info: PluginInfo,
+  plugin_config: PluginConfig,
   id: PluginId,
   state: WeakPluginState,
   running_state: RunningStateSender,
   running_plugins: Arc<RwLock<HashMap<String, PluginId>>>,
 ) -> Result<(), anyhow::Error> {
-  trace!("start plugin process: {:?}, {:?}", id, plugin_info);
+  trace!("start plugin process: {:?}, {:?}", id, plugin_config);
   let (tx, ret) = tokio::sync::oneshot::channel();
 
   let (plugin_exit_tx, plugin_exit_rx) = tokio::sync::oneshot::channel();
-  let plugin_name = plugin_info.name.clone();
+  let plugin_name = plugin_config.name.clone();
   tokio::spawn(async move {
     if plugin_exit_rx.await.is_ok() {
       info!("Remove plugin from running list: {:?}", plugin_name);
@@ -234,25 +234,25 @@ pub(crate) async fn start_plugin_process(
   });
 
   let spawn_result = thread::Builder::new()
-    .name(format!("<{}> core host thread", &plugin_info.name))
+    .name(format!("<{}> core host thread", &plugin_config.name))
     .spawn(move || {
-      info!("Load {} plugin", &plugin_info.name);
-      let mut command = if fs::metadata(&plugin_info.exec_path).is_ok() {
+      info!("Load {} plugin", &plugin_config.name);
+      let mut command = if fs::metadata(&plugin_config.exec_path).is_ok() {
         // If exec_path exists, use it to start the process
         info!(
           "[AI Plugin]: run plugin with exec_path: {:?}",
-          &plugin_info.exec_path
+          &plugin_config.exec_path
         );
-        Command::new(&plugin_info.exec_path)
+        Command::new(&plugin_config.exec_path)
       } else {
         // Otherwise, use exec_command
         info!(
           "[AI Plugin]: run plugin with command: {:?}",
-          &plugin_info.exec_command
+          &plugin_config.exec_command
         );
         #[cfg(windows)]
         {
-          match get_exec_command_path(format!("{}.exe", &plugin_info.exec_command).as_str()) {
+          match get_exec_command_path(format!("{}.exe", &plugin_config.exec_command).as_str()) {
             Some(path) => {
               info!("Found plugin executable: {:?}", path);
               Command::new(&path)
@@ -262,13 +262,13 @@ pub(crate) async fn start_plugin_process(
                 "Plugin executable not found: {:?}",
                 &plugin_info.exec_command
               );
-              Command::new(&plugin_info.exec_command)
+              Command::new(&plugin_config.exec_command)
             },
           }
         }
 
         #[cfg(not(windows))]
-        Command::new(&plugin_info.exec_command)
+        Command::new(&plugin_config.exec_command)
       };
       #[cfg(windows)]
       {
@@ -277,13 +277,10 @@ pub(crate) async fn start_plugin_process(
         command.creation_flags(CREATE_NO_WINDOW);
       }
 
-      command.env("PYTHONIOENCODING", "utf8");
+      command.env("PYTHONIOENCODING", "utf-8:surrogateescape");
       if cfg!(windows) {
-        command.env("PYTHONIOENCODING", "utf8");
+        command.env("PYTHONUTF8", "1");
         command.env("PYTHONLEGACYWINDOWSSTDIO", "0");
-        // Add these for Windows:
-        command.env("PYTHONUTF8", "1"); // Forces UTF-8 mode
-        command.env("PYTHONIOENCODING", "utf-8:surrogateescape");
       } else {
         command.env("LANG", "en_US.UTF-8");
         command.env("LC_ALL", "en_US.UTF-8");
@@ -298,7 +295,7 @@ pub(crate) async fn start_plugin_process(
           let _ = running_state.send(RunningState::Connecting);
 
           let peer: RpcPeer = Arc::new(looper.get_raw_peer());
-          let name = plugin_info.name.clone();
+          let name = plugin_config.name.clone();
           peer.send_rpc_notification("ping", &JsonValue::Array(Vec::new()));
 
           let plugin = Plugin {
@@ -319,7 +316,7 @@ pub(crate) async fn start_plugin_process(
 
           let mut state = state;
           let err = looper.mainloop(
-            &plugin_info.name,
+            &plugin_config.name,
             &plugin_id,
             || BufReader::with_capacity(4096, child_stdout),
             &mut state,
@@ -358,7 +355,7 @@ async fn ensure_executable(exec_path: &std::path::Path) -> Result<(), anyhow::Er
 
 #[allow(dead_code)]
 #[cfg(target_os = "macos")]
-pub fn handle_macos_security_check(plugin_info: &PluginInfo) {
+pub fn handle_macos_security_check(plugin_info: &PluginConfig) {
   trace!("macos security check: {:?}", plugin_info.exec_path);
   let mut open_manually = false;
   match xattr::list(&plugin_info.exec_path) {

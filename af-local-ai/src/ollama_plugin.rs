@@ -1,6 +1,6 @@
 use crate::ai_ops::{AIPluginOperation, LocalAITranslateRowData, LocalAITranslateRowResponse};
 use af_plugin::core::plugin::{
-  Plugin, PluginId, PluginInfo, RunningState, RunningStateReceiver, RunningStateSender,
+  Plugin, PluginConfig, PluginId, RunningState, RunningStateReceiver, RunningStateSender,
 };
 use af_plugin::error::PluginError;
 use af_plugin::manager::PluginManager;
@@ -23,6 +23,11 @@ use tokio_stream::wrappers::{ReceiverStream, WatchStream};
 use tokio_stream::StreamExt;
 use tracing::{error, info, instrument, trace};
 
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct PluginInfo {
+  version: String,
+}
+
 pub struct OllamaAIPlugin {
   plugin_manager: Arc<PluginManager>,
   plugin_config: RwLock<Option<OllamaPluginConfig>>,
@@ -32,6 +37,7 @@ pub struct OllamaAIPlugin {
   running_state_rx: RunningStateReceiver,
   init_lock: tokio::sync::Mutex<()>,
   plugin_id: tokio::sync::Mutex<Option<PluginId>>,
+  plugin_info: tokio::sync::RwLock<Option<PluginInfo>>,
 }
 
 impl OllamaAIPlugin {
@@ -44,14 +50,24 @@ impl OllamaAIPlugin {
       running_state_rx: rx,
       init_lock: tokio::sync::Mutex::new(()),
       plugin_id: Default::default(),
+      plugin_info: Default::default(),
     }
   }
 
-  pub async fn plugin_info(&self) -> Result<Value, PluginError> {
-    let plugin = self.get_ai_plugin().await?;
-    let operation = AIPluginOperation::new(plugin);
-    let info = operation.plugin_info().await?;
-    Ok(info)
+  pub async fn plugin_info(&self) -> Result<PluginInfo, PluginError> {
+    let plugin_info = self.plugin_info.read().await.clone();
+    match plugin_info {
+      None => {
+        self.wait_until_plugin_ready().await?;
+        let plugin = self.get_ai_plugin().await?;
+        let operation = AIPluginOperation::new(plugin);
+        let info = operation.plugin_info().await?;
+        self.plugin_info.write().await.replace(info.clone());
+
+        Ok(info)
+      },
+      Some(plugin_info) => Ok(plugin_info),
+    }
   }
 
   /// Creates a new chat session.
@@ -268,7 +284,7 @@ impl OllamaAIPlugin {
       Ok(_guard) => {
         // We have the lock and can proceed with initialization.
         trace!("[AI Plugin] Creating chat plugin with config: {:?}", config);
-        let plugin_info = PluginInfo {
+        let plugin_config = PluginConfig {
           name: "af_ollama_plugin".to_string(),
           exec_path: config.executable_path.clone(),
           exec_command: config.executable_command.clone(),
@@ -280,7 +296,7 @@ impl OllamaAIPlugin {
 
         let plugin_id = self
           .plugin_manager
-          .create_plugin(plugin_info, self.running_state.clone())
+          .create_plugin(plugin_config, self.running_state.clone())
           .await?;
         *self.plugin_id.lock().await = Some(plugin_id);
 
@@ -312,8 +328,8 @@ impl OllamaAIPlugin {
           while let Some(state) = rx.next().await {
             if state.is_running() {
               let operation = AIPluginOperation::new(weak_plugin);
-              if let Ok(Value::Object(o)) = operation.plugin_info().await {
-                info!("[AI Plugin] using plugin: {:?}", o);
+              if let Ok(info) = operation.plugin_info().await {
+                info!("[AI Plugin] using plugin version: {}", info.version);
               }
               break;
             }

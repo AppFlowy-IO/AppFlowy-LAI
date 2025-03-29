@@ -1,6 +1,6 @@
 use crate::core::parser::ResponseParser;
 use crate::core::plugin::{
-  start_plugin_process, Plugin, PluginId, PluginInfo, RpcCtx, RunningStateSender,
+  start_plugin_process, Plugin, PluginConfig, PluginId, RpcCtx, RunningStateSender,
 };
 use crate::core::rpc_loop::Handler;
 use crate::core::rpc_peer::{PluginCommand, ResponsePayload};
@@ -44,7 +44,7 @@ impl PluginManager {
 
   pub async fn create_plugin(
     &self,
-    plugin_info: PluginInfo,
+    plugin_info: PluginConfig,
     running_state: RunningStateSender,
   ) -> Result<PluginId, PluginError> {
     if self.operating_system.is_not_desktop() {

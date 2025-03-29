@@ -2,7 +2,7 @@ use crate::embedding_ops::EmbeddingPluginOperation;
 use std::collections::HashMap;
 
 use af_plugin::core::plugin::{
-  Plugin, PluginInfo, RunningState, RunningStateReceiver, RunningStateSender,
+  Plugin, PluginConfig, RunningState, RunningStateReceiver, RunningStateSender,
 };
 use af_plugin::error::PluginError;
 use af_plugin::manager::PluginManager;
@@ -50,7 +50,7 @@ impl EmbeddingPlugin {
       );
     }
 
-    let info = PluginInfo {
+    let info = PluginConfig {
       name: "embedding".to_string(),
       exec_path: config.executable_path.clone(),
       exec_command: "".to_string(),

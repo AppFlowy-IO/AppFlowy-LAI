@@ -17,7 +17,6 @@ async fn load_chat_model_test() {
 
   let plugin_info = test.ollama_plugin.plugin_info().await.unwrap();
   println!("plugin info: {:?}", plugin_info);
-  assert!(plugin_info.get("version").is_some());
 
   let chat_id = uuid::Uuid::new_v4().to_string();
   let resp = test

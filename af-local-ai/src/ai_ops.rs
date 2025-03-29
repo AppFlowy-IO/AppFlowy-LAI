@@ -1,3 +1,4 @@
+use crate::ollama_plugin::PluginInfo;
 use af_plugin::core::parser::{EmptyResponseParser, ResponseParser};
 use af_plugin::core::plugin::Plugin;
 use af_plugin::error::{PluginError, RemoteError};
@@ -38,11 +39,14 @@ impl AIPluginOperation {
     plugin.async_request::<T>("handle", &request).await
   }
 
-  pub async fn plugin_info(&self) -> Result<Value, PluginError> {
+  pub async fn plugin_info(&self) -> Result<PluginInfo, PluginError> {
     let value = self
       .send_request::<DataJsonParser>("system_info", json!({}))
       .await?;
-    Ok(value)
+    let info = serde_json::from_value::<PluginInfo>(value)
+      .map_err(|err| PluginError::Internal(err.into()))?;
+
+    Ok(info)
   }
 
   pub async fn create_chat(&self, chat_id: &str) -> Result<(), PluginError> {
