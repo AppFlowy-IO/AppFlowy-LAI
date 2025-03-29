@@ -191,7 +191,9 @@ impl Plugin {
   }
 
   pub fn shutdown(&self) {
-    let _ = self.peer.send_rpc_request("shutdown", &json!({}));
+    if self.running_state.borrow().is_running() {
+      let _ = self.peer.send_rpc_request("shutdown", &json!({}));
+    }
   }
 
   pub fn subscribe_running_state(&self) -> WatchStream<RunningState> {
@@ -267,6 +269,14 @@ pub(crate) async fn start_plugin_process(
         use std::os::windows::process::CommandExt;
         const CREATE_NO_WINDOW: u32 = 0x08000000;
         command.creation_flags(CREATE_NO_WINDOW);
+      }
+
+      command.env("PYTHONIOENCODING", "utf8");
+      if cfg!(windows) {
+        command.env("PYTHONLEGACYWINDOWSSTDIO", "0");
+      } else {
+        command.env("LANG", "en_US.UTF-8");
+        command.env("LC_ALL", "en_US.UTF-8");
       }
 
       let child = command.stdin(Stdio::piped()).stdout(Stdio::piped()).spawn();

@@ -370,7 +370,7 @@ impl<W: Write> RawPeer<W> {
     drop(pending);
 
     trace!("[RPC] marking needs_exit");
-    self.0.needs_exit.store(true, Ordering::Relaxed);
+    self.0.needs_exit.store(true, Ordering::SeqCst);
   }
 
   /// Checks if the RPC system needs to exit.
