@@ -260,7 +260,7 @@ pub(crate) async fn start_plugin_process(
             None => {
               error!(
                 "Plugin executable not found: {:?}",
-                &plugin_info.exec_command
+                &plugin_config.exec_command
               );
               Command::new(&plugin_config.exec_command)
             },
@@ -277,7 +277,7 @@ pub(crate) async fn start_plugin_process(
         command.creation_flags(CREATE_NO_WINDOW);
       }
 
-      command.env("PYTHONIOENCODING", "utf-8:surrogateescape");
+      command.env("PYTHONIOENCODING", "utf-8");
       if cfg!(windows) {
         command.env("PYTHONUTF8", "1");
         command.env("PYTHONLEGACYWINDOWSSTDIO", "0");
