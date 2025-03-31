@@ -1,6 +1,4 @@
-use crate::util::{
-  collect_bytes_stream, collect_completion_stream, collect_json_stream, get_asset_path, LocalAITest,
-};
+use crate::util::{collect_completion_stream, collect_json_stream, get_asset_path, LocalAITest};
 
 use std::collections::HashMap;
 
@@ -65,42 +63,6 @@ async fn ci_chat_stream_test() {
     .unwrap();
   assert_eq!(questions.len(), 3);
   println!("related questions: {:?}", questions)
-}
-
-#[tokio::test]
-async fn ci_completion_text_test() {
-  let test = LocalAITest::new().unwrap();
-  test.init_chat_plugin().await;
-
-  let chat_plugin = test
-    .ollama_plugin
-    .get_ai_plugin()
-    .await
-    .unwrap()
-    .upgrade()
-    .unwrap();
-  let mut state_rx = chat_plugin.subscribe_running_state();
-  tokio::spawn(async move {
-    while let Some(state) = state_rx.next().await {
-      eprintln!("chat state: {:?}", state);
-    }
-  });
-
-  let resp = test
-    .ollama_plugin
-    .complete_text(
-      "tell me the book, atomic habits",
-      CompleteTextType::AskAI as u8,
-      None,
-    )
-    .await
-    .unwrap();
-  let answer = collect_bytes_stream(resp).await;
-  eprintln!("response: {:?}", answer);
-
-  let expected = r#"The book you're referring to is "Atomic Habits" by James Clear. It offers practical strategies for forming good habits, breaking bad ones, and mastering the tiny behaviors that lead to remarkable results"#;
-  let score = test.calculate_similarity(&answer, expected).await;
-  assert!(score > 0.7, "score: {}", score);
 }
 
 #[tokio::test]

@@ -6,8 +6,6 @@ use af_plugin::error::PluginError;
 use af_plugin::manager::PluginManager;
 use anyhow::{anyhow, Result};
 
-use bytes::Bytes;
-
 use crate::embedding_ops::EmbeddingPluginOperation;
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -208,27 +206,6 @@ impl OllamaAIPlugin {
       }
     }
     Ok(())
-  }
-
-  pub async fn complete_text(
-    &self,
-    message: &str,
-    complete_type: u8,
-    format: Option<serde_json::Value>,
-  ) -> Result<ReceiverStream<anyhow::Result<Bytes, PluginError>>, PluginError> {
-    trace!(
-      "[AI Plugin] complete text: {}, completion_type: {:?}, format: {:?}",
-      message,
-      complete_type,
-      format
-    );
-    self.wait_until_plugin_ready().await?;
-    let plugin = self.get_ai_plugin().await?;
-    let operation = AIPluginOperation::new(plugin);
-    let stream = operation
-      .complete_text(message, complete_type, format)
-      .await?;
-    Ok(stream)
   }
 
   pub async fn complete_text_v2(
