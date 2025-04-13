@@ -32,7 +32,7 @@ pub fn is_plugin_ready() -> bool {
 }
 
 #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
-pub(crate) fn ollama_plugin_path() -> PathBuf {
+pub fn ollama_plugin_path() -> PathBuf {
   PathBuf::new()
 }
 
