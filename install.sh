@@ -9,15 +9,15 @@ fi
 
 echo "🔍 Checking for required tools..."
 for cmd in curl jq unzip; do
-  if ! command -v $cmd &> /dev/null; then
+  if ! command -v $cmd &>/dev/null; then
     echo "❌ $cmd is required but not installed. Please install it first."
     case $cmd in
-      jq)
-        echo "   You can install it with: sudo apt install jq"
-        ;;
-      unzip)
-        echo "   You can install it with: sudo apt install unzip"
-        ;;
+    jq)
+      echo "   You can install it with: sudo apt install jq"
+      ;;
+    unzip)
+      echo "   You can install it with: sudo apt install unzip"
+      ;;
     esac
     exit 1
   fi
@@ -59,13 +59,14 @@ if [ -z "$BINARY_PATH" ]; then
   exit 1
 fi
 
-echo "🔧 Installing af_ollama_plugin to /usr/local/bin..."
-mkdir -p /usr/local/bin
-cp "$BINARY_PATH" /usr/local/bin/af_ollama_plugin
-chmod +x /usr/local/bin/af_ollama_plugin
+echo "🔧 Installing af_ollama_plugin to $HOME/.appflowy/..."
+INSTALL_DIR="$HOME/.appflowy"
+mkdir -p "$INSTALL_DIR"
+cp "$BINARY_PATH" "$INSTALL_DIR/af_ollama_plugin"
+chmod +x "$INSTALL_DIR/af_ollama_plugin"
 
 # Clean up
-cd - > /dev/null
+cd - >/dev/null
 rm -rf "$TMP_DIR"
 
 echo "✅ AppFlowy LAI plugin v$TAG_NAME successfully installed!"

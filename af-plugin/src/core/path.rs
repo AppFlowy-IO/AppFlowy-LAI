@@ -18,7 +18,7 @@ pub fn install_path() -> Option<PathBuf> {
   return Some(PathBuf::from("/usr/local/bin"));
 
   #[cfg(target_os = "linux")]
-  return Some(PathBuf::from("/usr/local/bin"));
+  return Some(PathBuf::from(std::env::var("HOME").unwrap_or_default()).join(".appflowy"));
 }
 
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
@@ -55,7 +55,10 @@ pub fn ollama_plugin_path() -> std::path::PathBuf {
   #[cfg(target_os = "linux")]
   {
     let offline_app = "af_ollama_plugin";
-    std::path::PathBuf::from(format!("/usr/local/bin/{}", offline_app))
+    let home_path = std::env::var("HOME").unwrap_or_default();
+    std::path::PathBuf::from(home_path)
+      .join(".appflowy")
+      .join(offline_app)
   }
 }
 
